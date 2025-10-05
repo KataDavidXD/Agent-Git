@@ -5,6 +5,7 @@
 
 [![Docs](https://img.shields.io/badge/docs-latest-blue?logo=readthedocs&logoColor=auto)](https://katadavidxd.github.io/Agent-Git/)
 [![GitHub stars](https://img.shields.io/github/stars/KataDavidXD/Agent-Git?logo=github&logoColor=auto)](https://github.com/KataDavidXD/Agent-Git/stargazers)
+
 [![Reddit](https://img.shields.io/badge/Reddit-FF4500?logo=reddit&logoColor=auto)](https://reddit.com/r/your-subreddit)
 [![X](https://img.shields.io/badge/X-000000?logo=x&logoColor=auto)](https://x.com/your-handle)
 [![WeChat](https://img.shields.io/badge/WeChat-07C160?logo=wechat&logoColor=auto)](https://your-wechat-link)
