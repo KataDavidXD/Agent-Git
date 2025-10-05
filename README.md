@@ -53,6 +53,14 @@ Agent Git enables equivalent operations via a three-layer architecture.
 - **Drop-in Integration**: Works seamlessly with existing LangGraph applications
 - **Production Ready**: Comprehensive error handling, testing, and performance optimization
 
+## 📦 Download Pre-release Wheel
+
+You can download the **pre-release version** of Agent Git as a Python wheel from our GitHub Releases:
+
+[![Pre-release Wheel](https://img.shields.io/badge/Download-Pre--release-blue?logo=python&logoColor=white)](https://github.com/KataDavidXD/Agent-Git/releases/tag/V0.1.0-alpha)
+
+> ⚠️ This is a pre-release version. Please use with caution and report any issues.
+
 ## Installation
 
 ### Using uv (Recommended)
