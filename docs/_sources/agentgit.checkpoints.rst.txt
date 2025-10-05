@@ -1,0 +1,21 @@
+agentgit.checkpoints package
+============================
+
+Submodules
+----------
+
+agentgit.checkpoints.checkpoint module
+--------------------------------------
+
+.. automodule:: agentgit.checkpoints.checkpoint
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: agentgit.checkpoints
+   :members:
+   :show-inheritance:
+   :undoc-members:

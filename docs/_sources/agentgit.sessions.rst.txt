@@ -1,0 +1,29 @@
+agentgit.sessions package
+=========================
+
+Submodules
+----------
+
+agentgit.sessions.external\_session module
+------------------------------------------
+
+.. automodule:: agentgit.sessions.external_session
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+agentgit.sessions.internal\_session module
+------------------------------------------
+
+.. automodule:: agentgit.sessions.internal_session
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: agentgit.sessions
+   :members:
+   :show-inheritance:
+   :undoc-members:

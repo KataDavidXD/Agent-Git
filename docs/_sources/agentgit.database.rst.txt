@@ -1,0 +1,29 @@
+agentgit.database package
+=========================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   agentgit.database.repositories
+
+Submodules
+----------
+
+agentgit.database.db\_config module
+-----------------------------------
+
+.. automodule:: agentgit.database.db_config
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: agentgit.database
+   :members:
+   :show-inheritance:
+   :undoc-members:

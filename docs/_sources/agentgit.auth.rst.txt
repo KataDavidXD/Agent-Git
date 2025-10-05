@@ -1,0 +1,37 @@
+agentgit.auth package
+=====================
+
+Submodules
+----------
+
+agentgit.auth.auth\_service module
+----------------------------------
+
+.. automodule:: agentgit.auth.auth_service
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+agentgit.auth.user module
+-------------------------
+
+.. automodule:: agentgit.auth.user
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+agentgit.auth.validators module
+-------------------------------
+
+.. automodule:: agentgit.auth.validators
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: agentgit.auth
+   :members:
+   :show-inheritance:
+   :undoc-members:

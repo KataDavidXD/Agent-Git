@@ -1,0 +1,21 @@
+agentgit.core package
+=====================
+
+Submodules
+----------
+
+agentgit.core.rollback\_protocol module
+---------------------------------------
+
+.. automodule:: agentgit.core.rollback_protocol
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: agentgit.core
+   :members:
+   :show-inheritance:
+   :undoc-members:

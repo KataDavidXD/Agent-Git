@@ -1,0 +1,45 @@
+agentgit.database.repositories package
+======================================
+
+Submodules
+----------
+
+agentgit.database.repositories.checkpoint\_repository module
+------------------------------------------------------------
+
+.. automodule:: agentgit.database.repositories.checkpoint_repository
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+agentgit.database.repositories.external\_session\_repository module
+-------------------------------------------------------------------
+
+.. automodule:: agentgit.database.repositories.external_session_repository
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+agentgit.database.repositories.internal\_session\_repository module
+-------------------------------------------------------------------
+
+.. automodule:: agentgit.database.repositories.internal_session_repository
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+agentgit.database.repositories.user\_repository module
+------------------------------------------------------
+
+.. automodule:: agentgit.database.repositories.user_repository
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: agentgit.database.repositories
+   :members:
+   :show-inheritance:
+   :undoc-members:

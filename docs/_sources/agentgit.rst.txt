@@ -1,0 +1,23 @@
+agentgit package
+================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   agentgit.agents
+   agentgit.auth
+   agentgit.checkpoints
+   agentgit.core
+   agentgit.database
+   agentgit.sessions
+
+Module contents
+---------------
+
+.. automodule:: agentgit
+   :members:
+   :show-inheritance:
+   :undoc-members:

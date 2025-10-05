@@ -1,0 +1,29 @@
+agentgit.agents package
+=======================
+
+Submodules
+----------
+
+agentgit.agents.agent\_service module
+-------------------------------------
+
+.. automodule:: agentgit.agents.agent_service
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+agentgit.agents.rollback\_agent module
+--------------------------------------
+
+.. automodule:: agentgit.agents.rollback_agent
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: agentgit.agents
+   :members:
+   :show-inheritance:
+   :undoc-members:
