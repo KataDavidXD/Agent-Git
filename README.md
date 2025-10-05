@@ -3,7 +3,7 @@
 
 <img width="786" height="318" alt="Agent Git" src="https://github.com/user-attachments/assets/a22537bf-f800-46a0-b49f-35ef1cc55cff" />
 
-[![Docs](https://img.shields.io/badge/docs-latest-blue?logo=readthedocs&logoColor=auto)]([https://kata-davidxd.github.io/Agent-Git/](https://katadavidxd.github.io/Agent-Git/index.html))
+[![Docs](https://img.shields.io/badge/docs-latest-blue?logo=readthedocs&logoColor=auto)]([https://kata-davidxd.github.io/Agent-Git/]([https://katadavidxd.github.io/Agent-Git/index.html](https://katadavidxd.github.io/Agent-Git/)))
 [![GitHub stars](https://img.shields.io/github/stars/KataDavidXD/Agent-Git?logo=github&logoColor=auto)](https://github.com/KataDavidXD/Agent-Git/stargazers)
 [![Reddit](https://img.shields.io/badge/Reddit-FF4500?logo=reddit&logoColor=auto)](https://reddit.com/r/your-subreddit)
 [![X](https://img.shields.io/badge/X-000000?logo=x&logoColor=auto)](https://x.com/your-handle)
