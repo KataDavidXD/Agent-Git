@@ -593,6 +593,7 @@ Partners: **HKU Lab for AI Agents in Business and Economics**
 👉 [Learn more](https://camo.hku.hk/research-labs/research-labs-lab-for-ai-agents-in-business-and-economics/)
 
 ## License
+Agent Git is released under the Apache 2.0 License, ensuring compatibility with the LangGraph and Agno ecosystems while providing patent protection and commercial-friendly terms.
 
 ## Support
 
