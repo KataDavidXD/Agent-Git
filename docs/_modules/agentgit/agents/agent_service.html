@@ -1,0 +1,522 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>agentgit.agents.agent_service &mdash; Agent Git 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Agent Git
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">agentgit</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Agent Git</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">agentgit.agents.agent_service</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for agentgit.agents.agent_service</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Service for managing RollbackAgent instances.</span>
+
+<span class="sd">Handles agent creation, rollback operations, and session management.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChatOpenAI</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.agents.rollback_agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">RollbackAgent</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.sessions.external_session</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExternalSession</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.sessions.internal_session</span><span class="w"> </span><span class="kn">import</span> <span class="n">InternalSession</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.database.repositories.external_session_repository</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExternalSessionRepository</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.database.repositories.internal_session_repository</span><span class="w"> </span><span class="kn">import</span> <span class="n">InternalSessionRepository</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.database.repositories.checkpoint_repository</span><span class="w"> </span><span class="kn">import</span> <span class="n">CheckpointRepository</span>
+
+
+<div class="viewcode-block" id="AgentService">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.agent_service.AgentService">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AgentService</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Service for managing RollbackAgent instances.</span>
+<span class="sd">    </span>
+<span class="sd">    Provides high-level operations for creating agents, handling rollbacks,</span>
+<span class="sd">    and managing the interaction between external and internal sessions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the agent service.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            model_config: Optional configuration for the AI model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">external_session_repo</span> <span class="o">=</span> <span class="n">ExternalSessionRepository</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">internal_session_repo</span> <span class="o">=</span> <span class="n">InternalSessionRepository</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span> <span class="o">=</span> <span class="n">CheckpointRepository</span><span class="p">()</span>
+        
+        <span class="c1"># Default model configuration</span>
+        <span class="n">base_url</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;BASE_URL&quot;</span><span class="p">)</span>
+        <span class="n">api_key</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;OPENAI_API_KEY&quot;</span><span class="p">)</span>
+        <span class="n">base_url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_base_url</span><span class="p">(</span><span class="n">base_url</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_config</span> <span class="o">=</span> <span class="n">model_config</span> <span class="ow">or</span> <span class="p">{</span>
+            <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.7</span><span class="p">,</span>
+            <span class="s2">&quot;api_key&quot;</span><span class="p">:</span> <span class="n">api_key</span><span class="p">,</span>
+            <span class="s2">&quot;base_url&quot;</span><span class="p">:</span> <span class="n">base_url</span>
+        <span class="p">}</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_agent</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">RollbackAgent</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_sanitize_base_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw_url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">raw_url</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">raw_url</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">url</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">url</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;http://&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">url</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;https://&quot;</span><span class="p">)):</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;https://&quot;</span> <span class="o">+</span> <span class="n">url</span>
+        <span class="k">return</span> <span class="n">url</span>
+    
+<div class="viewcode-block" id="AgentService.create_new_agent">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.agent_service.AgentService.create_new_agent">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_new_agent</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">external_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">session_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">base_url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">api_key</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">agent_kwargs</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RollbackAgent</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a new RollbackAgent for an external session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            external_session_id: ID of the external session.</span>
+<span class="sd">            session_name: Optional name for the internal session.</span>
+<span class="sd">            base_url: Optional base URL for the model provider (overrides defaults/env if provided).</span>
+<span class="sd">            api_key: Optional API key for the model provider (overrides defaults/env if provided).</span>
+<span class="sd">            **agent_kwargs: Additional arguments for the agent.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            The created RollbackAgent instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Resolve effective model configuration (allow per-call overrides)</span>
+        <span class="n">effective_model_config</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_config</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">api_key</span><span class="p">:</span>
+            <span class="n">effective_model_config</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">api_key</span>
+        <span class="k">if</span> <span class="n">base_url</span><span class="p">:</span>
+            <span class="n">effective_model_config</span><span class="p">[</span><span class="s2">&quot;base_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_base_url</span><span class="p">(</span><span class="n">base_url</span><span class="p">)</span>
+        
+        <span class="c1"># Create the model using LangChain&#39;s ChatOpenAI</span>
+        <span class="c1"># Map config keys to LangChain format</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">ChatOpenAI</span><span class="p">(</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">effective_model_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">),</span>
+            <span class="n">temperature</span><span class="o">=</span><span class="n">effective_model_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">),</span>
+            <span class="n">openai_api_key</span><span class="o">=</span><span class="n">effective_model_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;api_key&quot;</span><span class="p">),</span>
+            <span class="n">openai_api_base</span><span class="o">=</span><span class="n">effective_model_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;base_url&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Create the agent with repositories</span>
+        <span class="n">agent</span> <span class="o">=</span> <span class="n">RollbackAgent</span><span class="p">(</span>
+            <span class="n">external_session_id</span><span class="o">=</span><span class="n">external_session_id</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">internal_session_repo</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">internal_session_repo</span><span class="p">,</span>
+            <span class="n">checkpoint_repo</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="p">,</span>
+            <span class="n">add_history_to_messages</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">num_history_runs</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+            <span class="n">show_tool_calls</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">agent_kwargs</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Set session name if provided</span>
+        <span class="k">if</span> <span class="n">session_name</span> <span class="ow">and</span> <span class="n">agent</span><span class="o">.</span><span class="n">internal_session</span><span class="p">:</span>
+            <span class="c1"># Update the internal session name via checkpoint name</span>
+            <span class="c1"># (Internal sessions don&#39;t have names, but we can track it in metadata)</span>
+            <span class="k">pass</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_agent</span> <span class="o">=</span> <span class="n">agent</span>
+        <span class="k">return</span> <span class="n">agent</span></div>
+
+    
+<div class="viewcode-block" id="AgentService.resume_agent">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.agent_service.AgentService.resume_agent">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">resume_agent</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">external_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">internal_session_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">base_url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">api_key</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">RollbackAgent</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resume an existing agent session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            external_session_id: ID of the external session.</span>
+<span class="sd">            internal_session_id: Optional specific internal session to resume.</span>
+<span class="sd">                               If None, uses the current internal session.</span>
+<span class="sd">            base_url: Optional base URL for the model provider (overrides defaults/env if provided).</span>
+<span class="sd">            api_key: Optional API key for the model provider (overrides defaults/env if provided).</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            The resumed RollbackAgent instance, or None if not found.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Get the external session</span>
+        <span class="n">external_session</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_session_repo</span><span class="o">.</span><span class="n">get_by_id</span><span class="p">(</span><span class="n">external_session_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">external_session</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        
+        <span class="c1"># Get the internal session to resume</span>
+        <span class="k">if</span> <span class="n">internal_session_id</span><span class="p">:</span>
+            <span class="n">internal_session</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session_repo</span><span class="o">.</span><span class="n">get_by_id</span><span class="p">(</span><span class="n">internal_session_id</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">internal_session</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session_repo</span><span class="o">.</span><span class="n">get_current_session</span><span class="p">(</span><span class="n">external_session_id</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">internal_session</span><span class="p">:</span>
+            <span class="c1"># No existing internal session, create new agent</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_new_agent</span><span class="p">(</span><span class="n">external_session_id</span><span class="p">)</span>
+        
+        <span class="c1"># Create agent and restore state</span>
+        <span class="n">effective_model_config</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_config</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">api_key</span><span class="p">:</span>
+            <span class="n">effective_model_config</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">api_key</span>
+        <span class="k">if</span> <span class="n">base_url</span><span class="p">:</span>
+            <span class="n">effective_model_config</span><span class="p">[</span><span class="s2">&quot;base_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_base_url</span><span class="p">(</span><span class="n">base_url</span><span class="p">)</span>
+        
+        <span class="c1"># Create the model using LangChain&#39;s ChatOpenAI</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">ChatOpenAI</span><span class="p">(</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">effective_model_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">),</span>
+            <span class="n">temperature</span><span class="o">=</span><span class="n">effective_model_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">),</span>
+            <span class="n">openai_api_key</span><span class="o">=</span><span class="n">effective_model_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;api_key&quot;</span><span class="p">),</span>
+            <span class="n">openai_api_base</span><span class="o">=</span><span class="n">effective_model_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;base_url&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+        
+        <span class="n">agent</span> <span class="o">=</span> <span class="n">RollbackAgent</span><span class="p">(</span>
+            <span class="n">external_session_id</span><span class="o">=</span><span class="n">external_session_id</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">internal_session_repo</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">internal_session_repo</span><span class="p">,</span>
+            <span class="n">checkpoint_repo</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="p">,</span>
+            <span class="n">session_state</span><span class="o">=</span><span class="n">internal_session</span><span class="o">.</span><span class="n">session_state</span><span class="p">,</span>
+            <span class="n">skip_session_creation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># Don&#39;t create a new session, we&#39;re resuming</span>
+            <span class="n">add_history_to_messages</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">num_history_runs</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+            <span class="n">show_tool_calls</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Set the existing internal session (since we skipped creation)</span>
+        <span class="n">agent</span><span class="o">.</span><span class="n">internal_session</span> <span class="o">=</span> <span class="n">internal_session</span>
+        <span class="n">agent</span><span class="o">.</span><span class="n">langgraph_session_id</span> <span class="o">=</span> <span class="n">internal_session</span><span class="o">.</span><span class="n">langgraph_session_id</span>
+        
+        <span class="c1"># CRITICAL FIX: Restore conversation history for resumed sessions</span>
+        <span class="c1"># This ensures the agent remembers previous conversations</span>
+        <span class="k">if</span> <span class="n">internal_session</span><span class="o">.</span><span class="n">conversation_history</span><span class="p">:</span>
+            <span class="n">agent</span><span class="o">.</span><span class="n">_restored_from_checkpoint</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">agent</span><span class="o">.</span><span class="n">_restored_history</span> <span class="o">=</span> <span class="n">internal_session</span><span class="o">.</span><span class="n">conversation_history</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_agent</span> <span class="o">=</span> <span class="n">agent</span>
+        <span class="k">return</span> <span class="n">agent</span></div>
+
+    
+<div class="viewcode-block" id="AgentService.rollback_to_checkpoint">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.agent_service.AgentService.rollback_to_checkpoint">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">rollback_to_checkpoint</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">external_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">checkpoint_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">base_url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">api_key</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">rollback_tools</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">RollbackAgent</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a new agent from a checkpoint (rollback operation).</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            external_session_id: ID of the external session.</span>
+<span class="sd">            checkpoint_id: ID of the checkpoint to rollback to.</span>
+<span class="sd">            base_url: Optional base URL for the model provider (overrides defaults/env if provided).</span>
+<span class="sd">            api_key: Optional API key for the model provider (overrides defaults/env if provided).</span>
+<span class="sd">            rollback_tools: Whether to rollback tool operations after the checkpoint.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            A new RollbackAgent with the checkpoint&#39;s state, or None if failed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># If we have a current agent and rollback_tools is enabled, </span>
+            <span class="c1"># rollback tool operations after the checkpoint first</span>
+            <span class="k">if</span> <span class="n">rollback_tools</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_agent</span><span class="p">:</span>
+                <span class="n">checkpoint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">get_by_id</span><span class="p">(</span><span class="n">checkpoint_id</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">checkpoint</span> <span class="ow">and</span> <span class="s2">&quot;tool_track_position&quot;</span> <span class="ow">in</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">metadata</span><span class="p">:</span>
+                    <span class="n">tool_track_position</span> <span class="o">=</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;tool_track_position&quot;</span><span class="p">]</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Rolling back tools from position </span><span class="si">{</span><span class="n">tool_track_position</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+                    <span class="n">reverse_results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_agent</span><span class="o">.</span><span class="n">rollback_tools_from_track_index</span><span class="p">(</span><span class="n">tool_track_position</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">rr</span> <span class="ow">in</span> <span class="n">reverse_results</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">rr</span><span class="o">.</span><span class="n">reversed_successfully</span><span class="p">:</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Failed to reverse </span><span class="si">{</span><span class="n">rr</span><span class="o">.</span><span class="n">tool_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">rr</span><span class="o">.</span><span class="n">error_message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            
+            <span class="n">effective_model_config</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_config</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">api_key</span><span class="p">:</span>
+                <span class="n">effective_model_config</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">api_key</span>
+            <span class="k">if</span> <span class="n">base_url</span><span class="p">:</span>
+                <span class="n">effective_model_config</span><span class="p">[</span><span class="s2">&quot;base_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_base_url</span><span class="p">(</span><span class="n">base_url</span><span class="p">)</span>
+            
+            <span class="c1"># Create the model using LangChain&#39;s ChatOpenAI</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">ChatOpenAI</span><span class="p">(</span>
+                <span class="n">model</span><span class="o">=</span><span class="n">effective_model_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">),</span>
+                <span class="n">temperature</span><span class="o">=</span><span class="n">effective_model_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">),</span>
+                <span class="n">openai_api_key</span><span class="o">=</span><span class="n">effective_model_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;api_key&quot;</span><span class="p">),</span>
+                <span class="n">openai_api_base</span><span class="o">=</span><span class="n">effective_model_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;base_url&quot;</span><span class="p">)</span>
+            <span class="p">)</span>
+            
+            <span class="n">agent</span> <span class="o">=</span> <span class="n">RollbackAgent</span><span class="o">.</span><span class="n">from_checkpoint</span><span class="p">(</span>
+                <span class="n">checkpoint_id</span><span class="o">=</span><span class="n">checkpoint_id</span><span class="p">,</span>
+                <span class="n">external_session_id</span><span class="o">=</span><span class="n">external_session_id</span><span class="p">,</span>
+                <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">checkpoint_repo</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="p">,</span>
+                <span class="n">internal_session_repo</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">internal_session_repo</span><span class="p">,</span>
+                <span class="n">add_history_to_messages</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">num_history_runs</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                <span class="n">show_tool_calls</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_agent</span> <span class="o">=</span> <span class="n">agent</span>
+            <span class="k">return</span> <span class="n">agent</span>
+            
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Rollback failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span></div>
+
+    
+<div class="viewcode-block" id="AgentService.handle_agent_response">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.agent_service.AgentService.handle_agent_response">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">handle_agent_response</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent</span><span class="p">:</span> <span class="n">RollbackAgent</span><span class="p">,</span> <span class="n">response</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Handle agent response and check for rollback requests.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            agent: The RollbackAgent that generated the response.</span>
+<span class="sd">            response: The response from the agent.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            True if a rollback was requested and should be handled, False otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check if rollback was requested</span>
+        <span class="k">if</span> <span class="n">agent</span><span class="o">.</span><span class="n">internal_session</span> <span class="ow">and</span> <span class="n">agent</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">session_state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;rollback_requested&#39;</span><span class="p">):</span>
+            <span class="n">checkpoint_id</span> <span class="o">=</span> <span class="n">agent</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">session_state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;rollback_checkpoint_id&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">checkpoint_id</span><span class="p">:</span>
+                <span class="c1"># Don&#39;t clear the checkpoint_id yet - the caller needs it!</span>
+                <span class="c1"># Only clear the request flag</span>
+                <span class="n">agent</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">session_state</span><span class="p">[</span><span class="s1">&#39;rollback_requested&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="c1"># Keep rollback_checkpoint_id for the caller to use</span>
+                <span class="n">agent</span><span class="o">.</span><span class="n">_save_internal_session</span><span class="p">()</span>
+                
+                <span class="k">return</span> <span class="kc">True</span>  <span class="c1"># Signal that rollback should be performed</span>
+        
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+    
+<div class="viewcode-block" id="AgentService.list_internal_sessions">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.agent_service.AgentService.list_internal_sessions">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_internal_sessions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">external_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List all internal sessions for an external session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            external_session_id: ID of the external session.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List of internal sessions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session_repo</span><span class="o">.</span><span class="n">get_by_external_session</span><span class="p">(</span><span class="n">external_session_id</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="AgentService.list_checkpoints">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.agent_service.AgentService.list_checkpoints">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_checkpoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">internal_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List all checkpoints for an internal session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            internal_session_id: ID of the internal session.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List of checkpoints.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">get_by_internal_session</span><span class="p">(</span><span class="n">internal_session_id</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="AgentService.get_conversation_summary">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.agent_service.AgentService.get_conversation_summary">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_conversation_summary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent</span><span class="p">:</span> <span class="n">RollbackAgent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get a summary of the conversation history.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            agent: The RollbackAgent instance.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            A formatted summary of the conversation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">history</span> <span class="o">=</span> <span class="n">agent</span><span class="o">.</span><span class="n">get_conversation_history</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">history</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;No conversation history yet.&quot;</span>
+        
+        <span class="n">summary</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Conversation (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">history</span><span class="p">)</span><span class="si">}</span><span class="s2"> messages):</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">history</span><span class="p">[</span><span class="o">-</span><span class="mi">10</span><span class="p">:]:</span>  <span class="c1"># Show last 10 messages</span>
+            <span class="n">role</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;role&#39;</span><span class="p">,</span> <span class="s1">&#39;unknown&#39;</span><span class="p">)</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;content&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="n">timestamp</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;timestamp&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+            
+            <span class="c1"># Truncate long messages</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">content</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">:</span>
+                <span class="n">content</span> <span class="o">=</span> <span class="n">content</span><span class="p">[:</span><span class="mi">97</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;...&quot;</span>
+            
+            <span class="n">summary</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">[</span><span class="si">{</span><span class="n">role</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">content</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        
+        <span class="k">return</span> <span class="n">summary</span></div>
+
+    
+<div class="viewcode-block" id="AgentService.get_active_agent">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.agent_service.AgentService.get_active_agent">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_active_agent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">external_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">RollbackAgent</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get an active agent for a session if one exists.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            external_session_id: ID of the external session.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            The active RollbackAgent if found, None otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">active_agents</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">external_session_id</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="AgentService.cleanup_agent">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.agent_service.AgentService.cleanup_agent">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cleanup_agent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">external_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove an agent from active tracking.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            external_session_id: ID of the external session.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">external_session_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">active_agents</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">active_agents</span><span class="p">[</span><span class="n">external_session_id</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_agent</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_agent</span><span class="o">.</span><span class="n">external_session_id</span> <span class="o">==</span> <span class="n">external_session_id</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">current_agent</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+    
+<div class="viewcode-block" id="AgentService.get_branch_tree">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.agent_service.AgentService.get_branch_tree">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_branch_tree</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">external_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the branch tree structure for an external session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            external_session_id: ID of the external session.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary representing the branch tree structure.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">internal_sessions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session_repo</span><span class="o">.</span><span class="n">get_by_external_session</span><span class="p">(</span><span class="n">external_session_id</span><span class="p">)</span>
+        
+        <span class="c1"># Build session info map first</span>
+        <span class="n">session_info_map</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">session</span> <span class="ow">in</span> <span class="n">internal_sessions</span><span class="p">:</span>
+            <span class="n">session_info_map</span><span class="p">[</span><span class="n">session</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">session</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                <span class="s2">&quot;session_id&quot;</span><span class="p">:</span> <span class="n">session</span><span class="o">.</span><span class="n">langgraph_session_id</span><span class="p">,</span>
+                <span class="s2">&quot;created_at&quot;</span><span class="p">:</span> <span class="n">session</span><span class="o">.</span><span class="n">created_at</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span> <span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">created_at</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="s2">&quot;is_current&quot;</span><span class="p">:</span> <span class="n">session</span><span class="o">.</span><span class="n">is_current</span><span class="p">,</span>
+                <span class="s2">&quot;is_branch&quot;</span><span class="p">:</span> <span class="n">session</span><span class="o">.</span><span class="n">is_branch</span><span class="p">(),</span>
+                <span class="s2">&quot;checkpoint_count&quot;</span><span class="p">:</span> <span class="n">session</span><span class="o">.</span><span class="n">checkpoint_count</span><span class="p">,</span>
+                <span class="s2">&quot;tool_invocations&quot;</span><span class="p">:</span> <span class="n">session</span><span class="o">.</span><span class="n">tool_invocation_count</span><span class="p">,</span>
+                <span class="s2">&quot;children&quot;</span><span class="p">:</span> <span class="p">[]</span>
+            <span class="p">}</span>
+        
+        <span class="c1"># Build tree structure - first pass: identify roots</span>
+        <span class="n">tree</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">session</span> <span class="ow">in</span> <span class="n">internal_sessions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">session</span><span class="o">.</span><span class="n">parent_session_id</span><span class="p">:</span>  <span class="c1"># Root session</span>
+                <span class="n">tree</span><span class="p">[</span><span class="n">session</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">session_info_map</span><span class="p">[</span><span class="n">session</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
+        
+        <span class="c1"># Second pass: add children to parents</span>
+        <span class="k">for</span> <span class="n">session</span> <span class="ow">in</span> <span class="n">internal_sessions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">parent_session_id</span> <span class="ow">and</span> <span class="n">session</span><span class="o">.</span><span class="n">parent_session_id</span> <span class="ow">in</span> <span class="n">session_info_map</span><span class="p">:</span>
+                <span class="n">parent_info</span> <span class="o">=</span> <span class="n">session_info_map</span><span class="p">[</span><span class="n">session</span><span class="o">.</span><span class="n">parent_session_id</span><span class="p">]</span>
+                <span class="n">parent_info</span><span class="p">[</span><span class="s2">&quot;children&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">session_info_map</span><span class="p">[</span><span class="n">session</span><span class="o">.</span><span class="n">id</span><span class="p">])</span>
+        
+        <span class="k">return</span> <span class="n">tree</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Li Yang, Wang Siyuan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

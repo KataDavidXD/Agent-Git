@@ -1,0 +1,723 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>agentgit.agents package &mdash; Agent Git 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="agentgit.auth package" href="agentgit.auth.html" />
+    <link rel="prev" title="agentgit package" href="agentgit.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Agent Git
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">agentgit</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="agentgit.html">agentgit package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="agentgit.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="current reference internal" href="#">agentgit.agents package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="agentgit.auth.html">agentgit.auth package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="agentgit.checkpoints.html">agentgit.checkpoints package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="agentgit.core.html">agentgit.core package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="agentgit.database.html">agentgit.database package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="agentgit.sessions.html">agentgit.sessions package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="agentgit.html#module-agentgit">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Agent Git</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">agentgit</a></li>
+          <li class="breadcrumb-item"><a href="agentgit.html">agentgit package</a></li>
+      <li class="breadcrumb-item active">agentgit.agents package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/agentgit.agents.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="agentgit-agents-package">
+<h1>agentgit.agents package<a class="headerlink" href="#agentgit-agents-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-agentgit.agents.agent_service">
+<span id="agentgit-agents-agent-service-module"></span><h2>agentgit.agents.agent_service module<a class="headerlink" href="#module-agentgit.agents.agent_service" title="Link to this heading"></a></h2>
+<p>Service for managing RollbackAgent instances.</p>
+<p>Handles agent creation, rollback operations, and session management.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="agentgit.agents.agent_service.AgentService">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">agentgit.agents.agent_service.</span></span><span class="sig-name descname"><span class="pre">AgentService</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/agent_service.html#AgentService"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.agent_service.AgentService" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Service for managing RollbackAgent instances.</p>
+<p>Provides high-level operations for creating agents, handling rollbacks,
+and managing the interaction between external and internal sessions.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.agent_service.AgentService.cleanup_agent">
+<span class="sig-name descname"><span class="pre">cleanup_agent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">external_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/agent_service.html#AgentService.cleanup_agent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.agent_service.AgentService.cleanup_agent" title="Link to this definition"></a></dt>
+<dd><p>Remove an agent from active tracking.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>external_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – ID of the external session.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.agent_service.AgentService.create_new_agent">
+<span class="sig-name descname"><span class="pre">create_new_agent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">external_session_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">session_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">agent_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/agent_service.html#AgentService.create_new_agent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.agent_service.AgentService.create_new_agent" title="Link to this definition"></a></dt>
+<dd><p>Create a new RollbackAgent for an external session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>external_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – ID of the external session.</p></li>
+<li><p><strong>session_name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – Optional name for the internal session.</p></li>
+<li><p><strong>base_url</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – Optional base URL for the model provider (overrides defaults/env if provided).</p></li>
+<li><p><strong>api_key</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – Optional API key for the model provider (overrides defaults/env if provided).</p></li>
+<li><p><strong>**agent_kwargs</strong> – Additional arguments for the agent.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#agentgit.agents.rollback_agent.RollbackAgent" title="agentgit.agents.rollback_agent.RollbackAgent"><code class="xref py py-class docutils literal notranslate"><span class="pre">RollbackAgent</span></code></a></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The created RollbackAgent instance.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.agent_service.AgentService.get_active_agent">
+<span class="sig-name descname"><span class="pre">get_active_agent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">external_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/agent_service.html#AgentService.get_active_agent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.agent_service.AgentService.get_active_agent" title="Link to this definition"></a></dt>
+<dd><p>Get an active agent for a session if one exists.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>external_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – ID of the external session.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="#agentgit.agents.rollback_agent.RollbackAgent" title="agentgit.agents.rollback_agent.RollbackAgent"><code class="xref py py-class docutils literal notranslate"><span class="pre">RollbackAgent</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The active RollbackAgent if found, None otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.agent_service.AgentService.get_branch_tree">
+<span class="sig-name descname"><span class="pre">get_branch_tree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">external_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/agent_service.html#AgentService.get_branch_tree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.agent_service.AgentService.get_branch_tree" title="Link to this definition"></a></dt>
+<dd><p>Get the branch tree structure for an external session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>external_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – ID of the external session.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dictionary representing the branch tree structure.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.agent_service.AgentService.get_conversation_summary">
+<span class="sig-name descname"><span class="pre">get_conversation_summary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agent</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/agent_service.html#AgentService.get_conversation_summary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.agent_service.AgentService.get_conversation_summary" title="Link to this definition"></a></dt>
+<dd><p>Get a summary of the conversation history.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>agent</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#agentgit.agents.rollback_agent.RollbackAgent" title="agentgit.agents.rollback_agent.RollbackAgent"><code class="xref py py-class docutils literal notranslate"><span class="pre">RollbackAgent</span></code></a></span>) – The RollbackAgent instance.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A formatted summary of the conversation.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.agent_service.AgentService.handle_agent_response">
+<span class="sig-name descname"><span class="pre">handle_agent_response</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agent</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">response</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/agent_service.html#AgentService.handle_agent_response"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.agent_service.AgentService.handle_agent_response" title="Link to this definition"></a></dt>
+<dd><p>Handle agent response and check for rollback requests.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agent</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#agentgit.agents.rollback_agent.RollbackAgent" title="agentgit.agents.rollback_agent.RollbackAgent"><code class="xref py py-class docutils literal notranslate"><span class="pre">RollbackAgent</span></code></a></span>) – The RollbackAgent that generated the response.</p></li>
+<li><p><strong>response</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></span>) – The response from the agent.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if a rollback was requested and should be handled, False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.agent_service.AgentService.list_checkpoints">
+<span class="sig-name descname"><span class="pre">list_checkpoints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">internal_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/agent_service.html#AgentService.list_checkpoints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.agent_service.AgentService.list_checkpoints" title="Link to this definition"></a></dt>
+<dd><p>List all checkpoints for an internal session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>internal_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – ID of the internal session.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of checkpoints.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.agent_service.AgentService.list_internal_sessions">
+<span class="sig-name descname"><span class="pre">list_internal_sessions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">external_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/agent_service.html#AgentService.list_internal_sessions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.agent_service.AgentService.list_internal_sessions" title="Link to this definition"></a></dt>
+<dd><p>List all internal sessions for an external session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>external_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – ID of the external session.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of internal sessions.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.agent_service.AgentService.resume_agent">
+<span class="sig-name descname"><span class="pre">resume_agent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">external_session_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">internal_session_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/agent_service.html#AgentService.resume_agent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.agent_service.AgentService.resume_agent" title="Link to this definition"></a></dt>
+<dd><p>Resume an existing agent session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>external_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – ID of the external session.</p></li>
+<li><p><strong>internal_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span>) – Optional specific internal session to resume.
+If None, uses the current internal session.</p></li>
+<li><p><strong>base_url</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – Optional base URL for the model provider (overrides defaults/env if provided).</p></li>
+<li><p><strong>api_key</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – Optional API key for the model provider (overrides defaults/env if provided).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="#agentgit.agents.rollback_agent.RollbackAgent" title="agentgit.agents.rollback_agent.RollbackAgent"><code class="xref py py-class docutils literal notranslate"><span class="pre">RollbackAgent</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The resumed RollbackAgent instance, or None if not found.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.agent_service.AgentService.rollback_to_checkpoint">
+<span class="sig-name descname"><span class="pre">rollback_to_checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">external_session_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checkpoint_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rollback_tools</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/agent_service.html#AgentService.rollback_to_checkpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.agent_service.AgentService.rollback_to_checkpoint" title="Link to this definition"></a></dt>
+<dd><p>Create a new agent from a checkpoint (rollback operation).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>external_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – ID of the external session.</p></li>
+<li><p><strong>checkpoint_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – ID of the checkpoint to rollback to.</p></li>
+<li><p><strong>base_url</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – Optional base URL for the model provider (overrides defaults/env if provided).</p></li>
+<li><p><strong>api_key</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – Optional API key for the model provider (overrides defaults/env if provided).</p></li>
+<li><p><strong>rollback_tools</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – Whether to rollback tool operations after the checkpoint.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="#agentgit.agents.rollback_agent.RollbackAgent" title="agentgit.agents.rollback_agent.RollbackAgent"><code class="xref py py-class docutils literal notranslate"><span class="pre">RollbackAgent</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A new RollbackAgent with the checkpoint’s state, or None if failed.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-agentgit.agents.rollback_agent">
+<span id="agentgit-agents-rollback-agent-module"></span><h2>agentgit.agents.rollback_agent module<a class="headerlink" href="#module-agentgit.agents.rollback_agent" title="Link to this heading"></a></h2>
+<p>LangGraph Agent with rollback capabilities.</p>
+<p>Implements a checkpoint-based rollback system for LangGraph agents with
+time-travel through conversation states and full execution history preservation.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.AgentState">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">agentgit.agents.rollback_agent.</span></span><span class="sig-name descname"><span class="pre">AgentState</span></span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#AgentState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.AgentState" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">TypedDict</span></code></p>
+<p>State definition for the LangGraph agent.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.AgentState.messages">
+<span class="sig-name descname"><span class="pre">messages</span></span><a class="headerlink" href="#agentgit.agents.rollback_agent.AgentState.messages" title="Link to this definition"></a></dt>
+<dd><p>Conversation history as list of messages</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.AgentState.session_state">
+<span class="sig-name descname"><span class="pre">session_state</span></span><a class="headerlink" href="#agentgit.agents.rollback_agent.AgentState.session_state" title="Link to this definition"></a></dt>
+<dd><p>Custom session state dictionary</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.AgentState.tool_invocations">
+<span class="sig-name descname"><span class="pre">tool_invocations</span></span><a class="headerlink" href="#agentgit.agents.rollback_agent.AgentState.tool_invocations" title="Link to this definition"></a></dt>
+<dd><p>History of tool invocations</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.AgentState.rollback_requested">
+<span class="sig-name descname"><span class="pre">rollback_requested</span></span><a class="headerlink" href="#agentgit.agents.rollback_agent.AgentState.rollback_requested" title="Link to this definition"></a></dt>
+<dd><p>Flag indicating if rollback was requested</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.AgentState.rollback_checkpoint_id">
+<span class="sig-name descname"><span class="pre">rollback_checkpoint_id</span></span><a class="headerlink" href="#agentgit.agents.rollback_agent.AgentState.rollback_checkpoint_id" title="Link to this definition"></a></dt>
+<dd><p>ID of checkpoint to rollback to</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.AgentState.current_turn">
+<span class="sig-name descname"><span class="pre">current_turn</span></span><a class="headerlink" href="#agentgit.agents.rollback_agent.AgentState.current_turn" title="Link to this definition"></a></dt>
+<dd><p>Current conversation turn number</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.AgentState.user_id">
+<span class="sig-name descname"><span class="pre">user_id</span></span><a class="headerlink" href="#agentgit.agents.rollback_agent.AgentState.user_id" title="Link to this definition"></a></dt>
+<dd><p>ID of the user owning this session</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.AgentState.user_preferences">
+<span class="sig-name descname"><span class="pre">user_preferences</span></span><a class="headerlink" href="#agentgit.agents.rollback_agent.AgentState.user_preferences" title="Link to this definition"></a></dt>
+<dd><p>User preferences for agent behavior</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id0">
+<span class="sig-name descname"><span class="pre">current_turn</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></em><a class="headerlink" href="#id0" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id1">
+<span class="sig-name descname"><span class="pre">messages</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><code class="xref py py-class docutils literal notranslate"><span class="pre">Annotated</span></code><span class="pre">[</span><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code><span class="pre">[</span><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseMessage</span></code><span class="pre">]]</span></em><a class="headerlink" href="#id1" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id2">
+<span class="sig-name descname"><span class="pre">rollback_checkpoint_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code><span class="pre">[</span><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code><span class="pre">]</span></em><a class="headerlink" href="#id2" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id3">
+<span class="sig-name descname"><span class="pre">rollback_requested</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></em><a class="headerlink" href="#id3" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id4">
+<span class="sig-name descname"><span class="pre">session_state</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code><span class="pre">[</span><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code><span class="pre">,</span> <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code><span class="pre">]</span></em><a class="headerlink" href="#id4" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id5">
+<span class="sig-name descname"><span class="pre">tool_invocations</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code><span class="pre">[</span><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code><span class="pre">[</span><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code><span class="pre">,</span> <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code><span class="pre">]]</span></em><a class="headerlink" href="#id5" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id6">
+<span class="sig-name descname"><span class="pre">user_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code><span class="pre">[</span><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code><span class="pre">]</span></em><a class="headerlink" href="#id6" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id7">
+<span class="sig-name descname"><span class="pre">user_preferences</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code><span class="pre">[</span><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code><span class="pre">,</span> <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code><span class="pre">]</span></em><a class="headerlink" href="#id7" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">agentgit.agents.rollback_agent.</span></span><span class="sig-name descname"><span class="pre">RollbackAgent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">external_session_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tools</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auto_checkpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">internal_session_repo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checkpoint_repo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checkpointer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_session_creation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reverse_tools</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>LangGraph agent with checkpoint and rollback capabilities.</p>
+<p>Implements automatic checkpoint creation, database persistence, and
+non-destructive rollback with branch preservation.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.external_session_id">
+<span class="sig-name descname"><span class="pre">external_session_id</span></span><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.external_session_id" title="Link to this definition"></a></dt>
+<dd><p>ID of the external session this agent belongs to</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.internal_session">
+<span class="sig-name descname"><span class="pre">internal_session</span></span><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.internal_session" title="Link to this definition"></a></dt>
+<dd><p>Current internal session being used</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.auto_checkpoint">
+<span class="sig-name descname"><span class="pre">auto_checkpoint</span></span><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.auto_checkpoint" title="Link to this definition"></a></dt>
+<dd><p>Whether to automatically create checkpoints after tool calls</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.graph">
+<span class="sig-name descname"><span class="pre">graph</span></span><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.graph" title="Link to this definition"></a></dt>
+<dd><p>The compiled LangGraph workflow</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.tool_rollback_registry">
+<span class="sig-name descname"><span class="pre">tool_rollback_registry</span></span><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.tool_rollback_registry" title="Link to this definition"></a></dt>
+<dd><p>Registry for tool rollback operations</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.arun">
+<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">arun</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent.arun"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.arun" title="Link to this definition"></a></dt>
+<dd><p>Async version of run method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>message</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The user message to process</p></li>
+<li><p><strong>config</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">RunnableConfig</span></code>]</span>) – Optional LangGraph configuration</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The agent’s response</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.cleanup_auto_checkpoints_tool">
+<span class="sig-name descname"><span class="pre">cleanup_auto_checkpoints_tool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">keep_latest</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent.cleanup_auto_checkpoints_tool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.cleanup_auto_checkpoints_tool" title="Link to this definition"></a></dt>
+<dd><p>Clean up old automatic checkpoints.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>keep_latest</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Number of latest checkpoints to keep</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Cleanup summary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.create_checkpoint_tool">
+<span class="sig-name descname"><span class="pre">create_checkpoint_tool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent.create_checkpoint_tool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.create_checkpoint_tool" title="Link to this definition"></a></dt>
+<dd><p>Create a manual checkpoint of the current conversation state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – Optional name for the checkpoint</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Confirmation message</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.delete_checkpoint_tool">
+<span class="sig-name descname"><span class="pre">delete_checkpoint_tool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">checkpoint_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent.delete_checkpoint_tool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.delete_checkpoint_tool" title="Link to this definition"></a></dt>
+<dd><p>Delete a specific checkpoint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>checkpoint_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – ID of the checkpoint to delete</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Confirmation message</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.from_checkpoint">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">checkpoint_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">external_session_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checkpoint_repo</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">internal_session_repo</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent.from_checkpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.from_checkpoint" title="Link to this definition"></a></dt>
+<dd><p>Create a new agent from a checkpoint (rollback).</p>
+<p>Creates a new internal session branched from the checkpoint,
+preserving the forward timeline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>checkpoint_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – ID of checkpoint to restore from</p></li>
+<li><p><strong>external_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – ID of external session</p></li>
+<li><p><strong>model</strong> – LangChain model to use</p></li>
+<li><p><strong>checkpoint_repo</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="agentgit.database.repositories.html#agentgit.database.repositories.checkpoint_repository.CheckpointRepository" title="agentgit.database.repositories.checkpoint_repository.CheckpointRepository"><code class="xref py py-class docutils literal notranslate"><span class="pre">CheckpointRepository</span></code></a></span>) – Checkpoint repository</p></li>
+<li><p><strong>internal_session_repo</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="agentgit.database.repositories.html#agentgit.database.repositories.internal_session_repository.InternalSessionRepository" title="agentgit.database.repositories.internal_session_repository.InternalSessionRepository"><code class="xref py py-class docutils literal notranslate"><span class="pre">InternalSessionRepository</span></code></a></span>) – Internal session repository</p></li>
+<li><p><strong>**kwargs</strong> – Additional agent configuration</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#agentgit.agents.rollback_agent.RollbackAgent" title="agentgit.agents.rollback_agent.RollbackAgent"><code class="xref py py-class docutils literal notranslate"><span class="pre">RollbackAgent</span></code></a></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>New RollbackAgent with checkpoint’s state</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.get_checkpoint_info_tool">
+<span class="sig-name descname"><span class="pre">get_checkpoint_info_tool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">checkpoint_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent.get_checkpoint_info_tool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.get_checkpoint_info_tool" title="Link to this definition"></a></dt>
+<dd><p>Get detailed information about a checkpoint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>checkpoint_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – ID of the checkpoint</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Detailed checkpoint information</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.get_conversation_history">
+<span class="sig-name descname"><span class="pre">get_conversation_history</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent.get_conversation_history"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.get_conversation_history" title="Link to this definition"></a></dt>
+<dd><p>Get conversation history for this session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]</span></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of conversation messages</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.get_session_state">
+<span class="sig-name descname"><span class="pre">get_session_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent.get_session_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.get_session_state" title="Link to this definition"></a></dt>
+<dd><p>Get current session state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Session state dictionary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.get_tool_track">
+<span class="sig-name descname"><span class="pre">get_tool_track</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent.get_tool_track"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.get_tool_track" title="Link to this definition"></a></dt>
+<dd><p>Get current recorded tool invocation track.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of tool invocation records</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.list_checkpoints_tool">
+<span class="sig-name descname"><span class="pre">list_checkpoints_tool</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent.list_checkpoints_tool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.list_checkpoints_tool" title="Link to this definition"></a></dt>
+<dd><p>List all available checkpoints for the current session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Formatted list of checkpoints</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.redo_tools">
+<span class="sig-name descname"><span class="pre">redo_tools</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent.redo_tools"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.redo_tools" title="Link to this definition"></a></dt>
+<dd><p>Re-execute forward handlers for recorded tools.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of new invocation records</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.rollback_to_checkpoint_tool">
+<span class="sig-name descname"><span class="pre">rollback_to_checkpoint_tool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">checkpoint_id_or_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent.rollback_to_checkpoint_tool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.rollback_to_checkpoint_tool" title="Link to this definition"></a></dt>
+<dd><p>Request rollback to a specific checkpoint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>checkpoint_id_or_name</strong> – ID or name of the checkpoint</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Status message</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.rollback_tools">
+<span class="sig-name descname"><span class="pre">rollback_tools</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent.rollback_tools"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.rollback_tools" title="Link to this definition"></a></dt>
+<dd><p>Run reverse handlers for recorded tools in reverse order.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of reverse invocation results</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.rollback_tools_from_track_index">
+<span class="sig-name descname"><span class="pre">rollback_tools_from_track_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_index</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent.rollback_tools_from_track_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.rollback_tools_from_track_index" title="Link to this definition"></a></dt>
+<dd><p>Run reverse handlers from specific track index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>start_index</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Index to start rollback from</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of reverse invocation results</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.agents.rollback_agent.RollbackAgent.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/agents/rollback_agent.html#RollbackAgent.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.agents.rollback_agent.RollbackAgent.run" title="Link to this definition"></a></dt>
+<dd><p>Run the agent and save state after completion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>message</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The user message to process</p></li>
+<li><p><strong>config</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">RunnableConfig</span></code>]</span>) – Optional LangGraph configuration</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The agent’s response</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-agentgit.agents">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-agentgit.agents" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="agentgit.html" class="btn btn-neutral float-left" title="agentgit package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="agentgit.auth.html" class="btn btn-neutral float-right" title="agentgit.auth package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Li Yang, Wang Siyuan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

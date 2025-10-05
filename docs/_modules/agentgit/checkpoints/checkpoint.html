@@ -1,0 +1,285 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>agentgit.checkpoints.checkpoint &mdash; Agent Git 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Agent Git
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">agentgit</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Agent Git</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">agentgit.checkpoints.checkpoint</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for agentgit.checkpoints.checkpoint</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Checkpoint model for the LangGraph rollback agent system.</span>
+
+<span class="sd">Represents saved states that can be restored with full execution history preservation.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Any</span>
+
+
+<div class="viewcode-block" id="Checkpoint">
+<a class="viewcode-back" href="../../../agentgit.checkpoints.html#agentgit.checkpoints.checkpoint.Checkpoint">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Checkpoint</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Checkpoint model for saving and restoring LangGraph agent states.</span>
+<span class="sd">    </span>
+<span class="sd">    A checkpoint captures the complete state of an internal session at a specific</span>
+<span class="sd">    point in time, allowing non-destructive rollback to that state by creating </span>
+<span class="sd">    a new internal session branch.</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        id: Unique identifier for the checkpoint.</span>
+<span class="sd">        internal_session_id: ID of the internal session this checkpoint was created from.</span>
+<span class="sd">        checkpoint_name: Optional user-friendly name for the checkpoint.</span>
+<span class="sd">        session_state: The agent&#39;s session state at checkpoint time.</span>
+<span class="sd">        conversation_history: The conversation history at checkpoint time.</span>
+<span class="sd">        is_auto: Whether this checkpoint was created automatically.</span>
+<span class="sd">        created_at: When this checkpoint was created.</span>
+<span class="sd">        metadata: Additional metadata about the checkpoint.</span>
+<span class="sd">        user_id: Optional ID of the user who owns this checkpoint.</span>
+<span class="sd">        tool_invocations: History of tool invocations up to this checkpoint.</span>
+<span class="sd">    </span>
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; checkpoint = Checkpoint(</span>
+<span class="sd">        ...     internal_session_id=1,</span>
+<span class="sd">        ...     checkpoint_name=&quot;Before tool call&quot;,</span>
+<span class="sd">        ...     session_state={&quot;counter&quot;: 5},</span>
+<span class="sd">        ...     is_auto=True</span>
+<span class="sd">        ... )</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="nb">id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">internal_session_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">checkpoint_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">session_state</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">conversation_history</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">is_auto</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">created_at</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">datetime</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">metadata</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">user_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">tool_invocations</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="Checkpoint.to_dict">
+<a class="viewcode-back" href="../../../agentgit.checkpoints.html#agentgit.checkpoints.checkpoint.Checkpoint.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert checkpoint to dictionary representation.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary with checkpoint data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="s2">&quot;internal_session_id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session_id</span><span class="p">,</span>
+            <span class="s2">&quot;checkpoint_name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_name</span><span class="p">,</span>
+            <span class="s2">&quot;session_state&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">session_state</span><span class="p">,</span>
+            <span class="s2">&quot;conversation_history&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">conversation_history</span><span class="p">,</span>
+            <span class="s2">&quot;is_auto&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_auto</span><span class="p">,</span>
+            <span class="s2">&quot;created_at&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">created_at</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">created_at</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span>
+            <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_id</span><span class="p">,</span>
+            <span class="s2">&quot;tool_invocations&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_invocations</span>
+        <span class="p">}</span></div>
+
+    
+<div class="viewcode-block" id="Checkpoint.from_dict">
+<a class="viewcode-back" href="../../../agentgit.checkpoints.html#agentgit.checkpoints.checkpoint.Checkpoint.from_dict">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Checkpoint&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a Checkpoint from dictionary data.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            data: Dictionary containing checkpoint data.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Checkpoint instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">()</span>
+        <span class="n">checkpoint</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span>
+        <span class="n">checkpoint</span><span class="o">.</span><span class="n">internal_session_id</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;internal_session_id&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">checkpoint</span><span class="o">.</span><span class="n">checkpoint_name</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;checkpoint_name&quot;</span><span class="p">)</span>
+        <span class="n">checkpoint</span><span class="o">.</span><span class="n">session_state</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;session_state&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">checkpoint</span><span class="o">.</span><span class="n">conversation_history</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;conversation_history&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">checkpoint</span><span class="o">.</span><span class="n">is_auto</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;is_auto&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">checkpoint</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">checkpoint</span><span class="o">.</span><span class="n">user_id</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;user_id&quot;</span><span class="p">)</span>
+        <span class="n">checkpoint</span><span class="o">.</span><span class="n">tool_invocations</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tool_invocations&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;created_at&quot;</span><span class="p">):</span>
+            <span class="n">checkpoint</span><span class="o">.</span><span class="n">created_at</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;created_at&quot;</span><span class="p">])</span>
+        
+        <span class="k">return</span> <span class="n">checkpoint</span></div>
+
+    
+<div class="viewcode-block" id="Checkpoint.from_internal_session">
+<a class="viewcode-back" href="../../../agentgit.checkpoints.html#agentgit.checkpoints.checkpoint.Checkpoint.from_internal_session">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_internal_session</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">internal_session</span><span class="p">,</span> <span class="n">checkpoint_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                            <span class="n">is_auto</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                            <span class="n">tool_invocations</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Checkpoint&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a checkpoint from an internal session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            internal_session: The internal session to checkpoint.</span>
+<span class="sd">            checkpoint_name: Optional name for the checkpoint.</span>
+<span class="sd">            is_auto: Whether this is an automatic checkpoint.</span>
+<span class="sd">            user_id: Optional user ID who owns this checkpoint.</span>
+<span class="sd">            tool_invocations: Optional tool invocation history.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            New Checkpoint instance with session data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Get the langgraph session ID</span>
+        <span class="n">session_id</span> <span class="o">=</span> <span class="n">internal_session</span><span class="o">.</span><span class="n">langgraph_session_id</span>
+        
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">internal_session_id</span><span class="o">=</span><span class="n">internal_session</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="n">checkpoint_name</span><span class="o">=</span><span class="n">checkpoint_name</span><span class="p">,</span>
+            <span class="n">session_state</span><span class="o">=</span><span class="n">internal_session</span><span class="o">.</span><span class="n">session_state</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+            <span class="n">conversation_history</span><span class="o">=</span><span class="n">internal_session</span><span class="o">.</span><span class="n">conversation_history</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+            <span class="n">is_auto</span><span class="o">=</span><span class="n">is_auto</span><span class="p">,</span>
+            <span class="n">created_at</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(),</span>
+            <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span><span class="p">,</span>
+            <span class="n">tool_invocations</span><span class="o">=</span><span class="n">tool_invocations</span> <span class="ow">or</span> <span class="p">[],</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;session_id&quot;</span><span class="p">:</span> <span class="n">session_id</span><span class="p">,</span>
+                <span class="s2">&quot;session_type&quot;</span><span class="p">:</span> <span class="s2">&quot;langgraph&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;checkpoint_count&quot;</span><span class="p">:</span> <span class="n">internal_session</span><span class="o">.</span><span class="n">checkpoint_count</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="s2">&quot;tool_track_position&quot;</span><span class="p">:</span> <span class="mi">0</span>  <span class="c1"># Will be updated by the agent</span>
+            <span class="p">}</span>
+        <span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="Checkpoint.get_summary">
+<a class="viewcode-back" href="../../../agentgit.checkpoints.html#agentgit.checkpoints.checkpoint.Checkpoint.get_summary">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_summary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get a summary of the checkpoint for display.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Human-readable summary of the checkpoint.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">checkpoint_type</span> <span class="o">=</span> <span class="s2">&quot;Auto&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_auto</span> <span class="k">else</span> <span class="s2">&quot;Manual&quot;</span>
+        <span class="n">created</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">created_at</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:%S&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">created_at</span> <span class="k">else</span> <span class="s2">&quot;unknown&quot;</span>
+        <span class="n">messages</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conversation_history</span><span class="p">)</span>
+        <span class="n">tools</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tool_invocations</span><span class="p">)</span>
+        
+        <span class="n">summary</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_name</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;Unnamed&#39;</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">checkpoint_type</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="n">summary</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Created: </span><span class="si">{</span><span class="n">created</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">summary</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Messages: </span><span class="si">{</span><span class="n">messages</span><span class="si">}</span><span class="s2">, Tool calls: </span><span class="si">{</span><span class="n">tools</span><span class="si">}</span><span class="s2">&quot;</span>
+        
+        <span class="k">return</span> <span class="n">summary</span></div>
+
+    
+<div class="viewcode-block" id="Checkpoint.has_tool_invocations">
+<a class="viewcode-back" href="../../../agentgit.checkpoints.html#agentgit.checkpoints.checkpoint.Checkpoint.has_tool_invocations">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">has_tool_invocations</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if this checkpoint has any tool invocations.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            True if there are tool invocations, False otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tool_invocations</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span></div>
+
+    
+<div class="viewcode-block" id="Checkpoint.get_tool_track_position">
+<a class="viewcode-back" href="../../../agentgit.checkpoints.html#agentgit.checkpoints.checkpoint.Checkpoint.get_tool_track_position">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_tool_track_position</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the tool track position from metadata.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            The tool track position, or 0 if not set.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tool_track_position&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Li Yang, Wang Siyuan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

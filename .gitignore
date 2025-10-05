@@ -4,7 +4,6 @@ __pycache__/
 *$py.class
 
 #any auxiliary files
-*.html
 CLAUDE.md
 whitePaper.md
 DEMO.md

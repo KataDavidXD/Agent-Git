@@ -1,0 +1,702 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>agentgit.database.repositories.internal_session_repository &mdash; Agent Git 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            Agent Git
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">agentgit</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">Agent Git</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">agentgit.database.repositories.internal_session_repository</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for agentgit.database.repositories.internal_session_repository</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Repository for internal session database operations.</span>
+
+<span class="sd">Handles CRUD operations for internal langgraph sessions in the rollback agent system.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.sessions.internal_session</span><span class="w"> </span><span class="kn">import</span> <span class="n">InternalSession</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.database.db_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_database_path</span>
+
+
+
+<div class="viewcode-block" id="InternalSessionRepository">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.internal_session_repository.InternalSessionRepository">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">InternalSessionRepository</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Repository for InternalSession CRUD operations with SQLite.</span>
+<span class="sd">    </span>
+<span class="sd">    Manages internal langgraph sessions which are the actual agent sessions</span>
+<span class="sd">    running within external sessions.</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        db_path: Path to the SQLite database file.</span>
+<span class="sd">    </span>
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; repo = InternalSessionRepository()</span>
+<span class="sd">        &gt;&gt;&gt; session = InternalSession(external_session_id=1, langgraph_session_id=&quot;langgraph_123&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; saved = repo.create(session)</span>
+<span class="sd">        &gt;&gt;&gt; sessions = repo.get_by_external_session(1)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the internal session repository.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            db_path: Path to SQLite database. If None, uses configured default.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">db_path</span> <span class="o">=</span> <span class="n">db_path</span> <span class="ow">or</span> <span class="n">get_database_path</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_db</span><span class="p">()</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_init_db</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the internal sessions table if it doesn&#39;t exist.&quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                CREATE TABLE IF NOT EXISTS internal_sessions (</span>
+<span class="s2">                    id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="s2">                    external_session_id INTEGER NOT NULL,</span>
+<span class="s2">                    langgraph_session_id TEXT UNIQUE NOT NULL,</span>
+<span class="s2">                    state_data TEXT,</span>
+<span class="s2">                    conversation_history TEXT,</span>
+<span class="s2">                    created_at TEXT NOT NULL,</span>
+<span class="s2">                    is_current INTEGER DEFAULT 0,</span>
+<span class="s2">                    checkpoint_count INTEGER DEFAULT 0,</span>
+<span class="s2">                    parent_session_id INTEGER,</span>
+<span class="s2">                    branch_point_checkpoint_id INTEGER,</span>
+<span class="s2">                    tool_invocation_count INTEGER DEFAULT 0,</span>
+<span class="s2">                    metadata TEXT,</span>
+<span class="s2">                    FOREIGN KEY (external_session_id) REFERENCES external_sessions(id) ON DELETE CASCADE,</span>
+<span class="s2">                    FOREIGN KEY (parent_session_id) REFERENCES internal_sessions(id) ON DELETE SET NULL,</span>
+<span class="s2">                    FOREIGN KEY (branch_point_checkpoint_id) REFERENCES checkpoints(id) ON DELETE SET NULL</span>
+<span class="s2">                )</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
+            
+            <span class="c1"># Check for migration needs</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA table_info(internal_sessions)&quot;</span><span class="p">)</span>
+            <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">column</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
+            
+            <span class="c1"># Add new columns if they don&#39;t exist</span>
+            <span class="k">if</span> <span class="s1">&#39;parent_session_id&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;ALTER TABLE internal_sessions ADD COLUMN parent_session_id INTEGER&quot;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="s1">&#39;branch_point_checkpoint_id&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;ALTER TABLE internal_sessions ADD COLUMN branch_point_checkpoint_id INTEGER&quot;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="s1">&#39;tool_invocation_count&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;ALTER TABLE internal_sessions ADD COLUMN tool_invocation_count INTEGER DEFAULT 0&quot;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="s1">&#39;metadata&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;ALTER TABLE internal_sessions ADD COLUMN metadata TEXT&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                CREATE INDEX IF NOT EXISTS idx_internal_sessions_external </span>
+<span class="s2">                ON internal_sessions(external_session_id)</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                CREATE INDEX IF NOT EXISTS idx_internal_sessions_langgraph </span>
+<span class="s2">                ON internal_sessions(langgraph_session_id)</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                CREATE INDEX IF NOT EXISTS idx_internal_sessions_parent </span>
+<span class="s2">                ON internal_sessions(parent_session_id)</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                CREATE INDEX IF NOT EXISTS idx_internal_sessions_branch </span>
+<span class="s2">                ON internal_sessions(branch_point_checkpoint_id)</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
+            
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    
+<div class="viewcode-block" id="InternalSessionRepository.create">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.create">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session</span><span class="p">:</span> <span class="n">InternalSession</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">InternalSession</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a new internal session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            session: InternalSession object to create.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            The created session with id populated.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">session</span><span class="o">.</span><span class="n">created_at</span><span class="p">:</span>
+            <span class="n">session</span><span class="o">.</span><span class="n">created_at</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+        
+        <span class="c1"># Mark other sessions as not current</span>
+        <span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">is_current</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mark_all_not_current</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">external_session_id</span><span class="p">)</span>
+        
+        <span class="n">session_dict</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+        
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                INSERT INTO internal_sessions </span>
+<span class="s2">                (external_session_id, langgraph_session_id, state_data, conversation_history, </span>
+<span class="s2">                 created_at, is_current, checkpoint_count, parent_session_id,</span>
+<span class="s2">                 branch_point_checkpoint_id, tool_invocation_count, metadata)</span>
+<span class="s2">                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">external_session_id</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">langgraph_session_id</span><span class="p">,</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">session_state</span><span class="p">),</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">conversation_history</span><span class="p">),</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">created_at</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+                <span class="mi">1</span> <span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">is_current</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">checkpoint_count</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">parent_session_id</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">branch_point_checkpoint_id</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">tool_invocation_count</span><span class="p">,</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span> <span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">metadata</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">))</span>
+            
+            <span class="n">session</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">lastrowid</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">session</span></div>
+
+    
+<div class="viewcode-block" id="InternalSessionRepository.update">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.update">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session</span><span class="p">:</span> <span class="n">InternalSession</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update an existing internal session.</span>
+<span class="sd">        </span>
+<span class="sd">        Updates session state and conversation history.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            session: InternalSession object with updated data.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            True if update successful, False if session not found.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">session</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        
+        <span class="c1"># Mark other sessions as not current if this one is current</span>
+        <span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">is_current</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mark_all_not_current</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">external_session_id</span><span class="p">,</span> <span class="n">exclude_id</span><span class="o">=</span><span class="n">session</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                UPDATE internal_sessions </span>
+<span class="s2">                SET state_data = ?, conversation_history = ?, is_current = ?, </span>
+<span class="s2">                    checkpoint_count = ?, tool_invocation_count = ?, metadata = ?</span>
+<span class="s2">                WHERE id = ?</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">session_state</span><span class="p">),</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">conversation_history</span><span class="p">),</span>
+                <span class="mi">1</span> <span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">is_current</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">checkpoint_count</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">tool_invocation_count</span><span class="p">,</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span> <span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">metadata</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">id</span>
+            <span class="p">))</span>
+            
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">cursor</span><span class="o">.</span><span class="n">rowcount</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="InternalSessionRepository.get_by_id">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_by_id">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">InternalSession</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get an internal session by ID.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            session_id: The ID of the session to retrieve.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            InternalSession if found, None otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                SELECT id, external_session_id, langgraph_session_id, state_data, </span>
+<span class="s2">                       conversation_history, created_at, is_current, checkpoint_count,</span>
+<span class="s2">                       parent_session_id, branch_point_checkpoint_id, </span>
+<span class="s2">                       tool_invocation_count, metadata</span>
+<span class="s2">                FROM internal_sessions</span>
+<span class="s2">                WHERE id = ?</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">session_id</span><span class="p">,))</span>
+            
+            <span class="n">row</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">row</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_row_to_session</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+    
+<div class="viewcode-block" id="InternalSessionRepository.get_by_langgraph_session_id">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_by_langgraph_session_id">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_by_langgraph_session_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">langgraph_session_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">InternalSession</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get an internal session by langgraph session ID.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            langgraph_session_id: The langgraph session ID.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            InternalSession if found, None otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                SELECT id, external_session_id, langgraph_session_id, state_data, </span>
+<span class="s2">                       conversation_history, created_at, is_current, checkpoint_count,</span>
+<span class="s2">                       parent_session_id, branch_point_checkpoint_id, </span>
+<span class="s2">                       tool_invocation_count, metadata</span>
+<span class="s2">                FROM internal_sessions</span>
+<span class="s2">                WHERE langgraph_session_id = ?</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">langgraph_session_id</span><span class="p">,))</span>
+            
+            <span class="n">row</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">row</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_row_to_session</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+    
+<div class="viewcode-block" id="InternalSessionRepository.get_by_external_session">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_by_external_session">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_by_external_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">external_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">InternalSession</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all internal sessions for an external session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            external_session_id: The ID of the external session.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List of InternalSession objects, ordered by created_at descending.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                SELECT id, external_session_id, langgraph_session_id, state_data, </span>
+<span class="s2">                       conversation_history, created_at, is_current, checkpoint_count,</span>
+<span class="s2">                       parent_session_id, branch_point_checkpoint_id, </span>
+<span class="s2">                       tool_invocation_count, metadata</span>
+<span class="s2">                FROM internal_sessions</span>
+<span class="s2">                WHERE external_session_id = ?</span>
+<span class="s2">                ORDER BY created_at DESC</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">external_session_id</span><span class="p">,))</span>
+            
+            <span class="n">rows</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_row_to_session</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="InternalSessionRepository.get_current_session">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_current_session">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_current_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">external_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">InternalSession</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the current internal session for an external session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            external_session_id: The ID of the external session.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            The current InternalSession if found, None otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                SELECT id, external_session_id, langgraph_session_id, state_data, </span>
+<span class="s2">                       conversation_history, created_at, is_current, checkpoint_count,</span>
+<span class="s2">                       parent_session_id, branch_point_checkpoint_id, </span>
+<span class="s2">                       tool_invocation_count, metadata</span>
+<span class="s2">                FROM internal_sessions</span>
+<span class="s2">                WHERE external_session_id = ? AND is_current = 1</span>
+<span class="s2">                LIMIT 1</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">external_session_id</span><span class="p">,))</span>
+            
+            <span class="n">row</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">row</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_row_to_session</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+    
+<div class="viewcode-block" id="InternalSessionRepository.set_current_session">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.set_current_session">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_current_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set an internal session as the current one for its external session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            session_id: The ID of the session to set as current.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            True if successful, False if session not found.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">session</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_by_id</span><span class="p">(</span><span class="n">session_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        
+        <span class="c1"># Mark all others as not current</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mark_all_not_current</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">external_session_id</span><span class="p">)</span>
+        
+        <span class="c1"># Mark this one as current</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                UPDATE internal_sessions </span>
+<span class="s2">                SET is_current = 1</span>
+<span class="s2">                WHERE id = ?</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">session_id</span><span class="p">,))</span>
+            
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">cursor</span><span class="o">.</span><span class="n">rowcount</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="InternalSessionRepository.delete">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.delete">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete an internal session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            session_id: The ID of the session to delete.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            True if deletion successful, False otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                DELETE FROM internal_sessions WHERE id = ?</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">session_id</span><span class="p">,))</span>
+            
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">cursor</span><span class="o">.</span><span class="n">rowcount</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="InternalSessionRepository.count_sessions">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.count_sessions">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">count_sessions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">external_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Count internal sessions for an external session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            external_session_id: The ID of the external session.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Number of internal sessions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                SELECT COUNT(*) FROM internal_sessions</span>
+<span class="s2">                WHERE external_session_id = ?</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">external_session_id</span><span class="p">,))</span>
+            
+            <span class="k">return</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="InternalSessionRepository.get_branch_sessions">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_branch_sessions">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_branch_sessions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">InternalSession</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all sessions branched from a parent session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            parent_session_id: The ID of the parent session.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List of InternalSession objects branched from the parent.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                SELECT id, external_session_id, langgraph_session_id, state_data, </span>
+<span class="s2">                       conversation_history, created_at, is_current, checkpoint_count,</span>
+<span class="s2">                       parent_session_id, branch_point_checkpoint_id, </span>
+<span class="s2">                       tool_invocation_count, metadata</span>
+<span class="s2">                FROM internal_sessions</span>
+<span class="s2">                WHERE parent_session_id = ?</span>
+<span class="s2">                ORDER BY created_at DESC</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">parent_session_id</span><span class="p">,))</span>
+            
+            <span class="n">rows</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_row_to_session</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="InternalSessionRepository.get_session_lineage">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_session_lineage">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_session_lineage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">InternalSession</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the lineage of a session (path from root to this session).</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            session_id: The ID of the session.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List of InternalSession objects from root to current session.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">lineage</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">current_id</span> <span class="o">=</span> <span class="n">session_id</span>
+        
+        <span class="k">while</span> <span class="n">current_id</span><span class="p">:</span>
+            <span class="n">session</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_by_id</span><span class="p">(</span><span class="n">current_id</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">session</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">lineage</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">session</span><span class="p">)</span>
+            <span class="n">current_id</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">parent_session_id</span>
+        
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">lineage</span><span class="p">))</span></div>
+
+    
+<div class="viewcode-block" id="InternalSessionRepository.update_tool_count">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.update_tool_count">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_tool_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">increment</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the tool invocation count for a session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            session_id: The ID of the session.</span>
+<span class="sd">            increment: Amount to increment by.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            True if update successful, False otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                UPDATE internal_sessions </span>
+<span class="s2">                SET tool_invocation_count = tool_invocation_count + ?</span>
+<span class="s2">                WHERE id = ?</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">increment</span><span class="p">,</span> <span class="n">session_id</span><span class="p">))</span>
+            
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">cursor</span><span class="o">.</span><span class="n">rowcount</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_mark_all_not_current</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">external_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">exclude_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Mark all internal sessions as not current for an external session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            external_session_id: The ID of the external session.</span>
+<span class="sd">            exclude_id: Optional ID to exclude from the update.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">exclude_id</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                    UPDATE internal_sessions </span>
+<span class="s2">                    SET is_current = 0</span>
+<span class="s2">                    WHERE external_session_id = ? AND id != ?</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">external_session_id</span><span class="p">,</span> <span class="n">exclude_id</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                    UPDATE internal_sessions </span>
+<span class="s2">                    SET is_current = 0</span>
+<span class="s2">                    WHERE external_session_id = ?</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">external_session_id</span><span class="p">,))</span>
+            
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_row_to_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">InternalSession</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert a database row to an InternalSession object.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            row: Tuple containing database fields.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            InternalSession object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Handle both old and new row formats</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">==</span> <span class="mi">8</span><span class="p">:</span>
+            <span class="c1"># Old format without new columns</span>
+            <span class="p">(</span><span class="n">session_id</span><span class="p">,</span> <span class="n">external_session_id</span><span class="p">,</span> <span class="n">langgraph_session_id</span><span class="p">,</span> <span class="n">state_data</span><span class="p">,</span> 
+             <span class="n">conversation_history</span><span class="p">,</span> <span class="n">created_at</span><span class="p">,</span> <span class="n">is_current</span><span class="p">,</span> <span class="n">checkpoint_count</span><span class="p">)</span> <span class="o">=</span> <span class="n">row</span>
+            <span class="n">parent_session_id</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">branch_point_checkpoint_id</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">tool_invocation_count</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">metadata</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># New format with all columns</span>
+            <span class="p">(</span><span class="n">session_id</span><span class="p">,</span> <span class="n">external_session_id</span><span class="p">,</span> <span class="n">langgraph_session_id</span><span class="p">,</span> <span class="n">state_data</span><span class="p">,</span> 
+             <span class="n">conversation_history</span><span class="p">,</span> <span class="n">created_at</span><span class="p">,</span> <span class="n">is_current</span><span class="p">,</span> <span class="n">checkpoint_count</span><span class="p">,</span>
+             <span class="n">parent_session_id</span><span class="p">,</span> <span class="n">branch_point_checkpoint_id</span><span class="p">,</span> 
+             <span class="n">tool_invocation_count</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span> <span class="o">=</span> <span class="n">row</span>
+        
+        <span class="n">session</span> <span class="o">=</span> <span class="n">InternalSession</span><span class="p">(</span>
+            <span class="nb">id</span><span class="o">=</span><span class="n">session_id</span><span class="p">,</span>
+            <span class="n">external_session_id</span><span class="o">=</span><span class="n">external_session_id</span><span class="p">,</span>
+            <span class="n">langgraph_session_id</span><span class="o">=</span><span class="n">langgraph_session_id</span><span class="p">,</span>
+            <span class="n">session_state</span><span class="o">=</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">state_data</span><span class="p">)</span> <span class="k">if</span> <span class="n">state_data</span> <span class="k">else</span> <span class="p">{},</span>
+            <span class="n">conversation_history</span><span class="o">=</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">conversation_history</span><span class="p">)</span> <span class="k">if</span> <span class="n">conversation_history</span> <span class="k">else</span> <span class="p">[],</span>
+            <span class="n">created_at</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="n">created_at</span><span class="p">)</span> <span class="k">if</span> <span class="n">created_at</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_current</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">is_current</span><span class="p">),</span>
+            <span class="n">checkpoint_count</span><span class="o">=</span><span class="n">checkpoint_count</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="n">parent_session_id</span><span class="o">=</span><span class="n">parent_session_id</span><span class="p">,</span>
+            <span class="n">branch_point_checkpoint_id</span><span class="o">=</span><span class="n">branch_point_checkpoint_id</span><span class="p">,</span>
+            <span class="n">tool_invocation_count</span><span class="o">=</span><span class="n">tool_invocation_count</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span> <span class="k">if</span> <span class="n">metadata</span> <span class="k">else</span> <span class="p">{}</span>
+        <span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">session</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Li Yang, Wang Siyuan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

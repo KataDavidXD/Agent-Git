@@ -1,0 +1,1087 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>agentgit.database.repositories package &mdash; Agent Git 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="agentgit.sessions package" href="agentgit.sessions.html" />
+    <link rel="prev" title="agentgit.database package" href="agentgit.database.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Agent Git
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">agentgit</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="agentgit.html">agentgit package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="agentgit.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="agentgit.agents.html">agentgit.agents package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="agentgit.auth.html">agentgit.auth package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="agentgit.checkpoints.html">agentgit.checkpoints package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="agentgit.core.html">agentgit.core package</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="agentgit.database.html">agentgit.database package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="agentgit.sessions.html">agentgit.sessions package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="agentgit.html#module-agentgit">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Agent Git</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">agentgit</a></li>
+          <li class="breadcrumb-item"><a href="agentgit.html">agentgit package</a></li>
+          <li class="breadcrumb-item"><a href="agentgit.database.html">agentgit.database package</a></li>
+      <li class="breadcrumb-item active">agentgit.database.repositories package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/agentgit.database.repositories.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="agentgit-database-repositories-package">
+<h1>agentgit.database.repositories package<a class="headerlink" href="#agentgit-database-repositories-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-agentgit.database.repositories.checkpoint_repository">
+<span id="agentgit-database-repositories-checkpoint-repository-module"></span><h2>agentgit.database.repositories.checkpoint_repository module<a class="headerlink" href="#module-agentgit.database.repositories.checkpoint_repository" title="Link to this heading"></a></h2>
+<p>Repository for checkpoint database operations.</p>
+<p>Handles CRUD operations for checkpoints in the LangGraph rollback agent system.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="agentgit.database.repositories.checkpoint_repository.CheckpointRepository">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">agentgit.database.repositories.checkpoint_repository.</span></span><span class="sig-name descname"><span class="pre">CheckpointRepository</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">db_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/checkpoint_repository.html#CheckpointRepository"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.checkpoint_repository.CheckpointRepository" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Repository for Checkpoint CRUD operations with SQLite.</p>
+<p>Manages checkpoints which capture complete agent state at specific points,
+allowing rollback functionality.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.database.repositories.checkpoint_repository.CheckpointRepository.db_path">
+<span class="sig-name descname"><span class="pre">db_path</span></span><a class="headerlink" href="#agentgit.database.repositories.checkpoint_repository.CheckpointRepository.db_path" title="Link to this definition"></a></dt>
+<dd><p>Path to the SQLite database file.</p>
+</dd></dl>
+
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">repo</span> <span class="o">=</span> <span class="n">CheckpointRepository</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">checkpoint</span> <span class="o">=</span> <span class="n">Checkpoint</span><span class="p">(</span><span class="n">internal_session_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">checkpoint_name</span><span class="o">=</span><span class="s2">&quot;Before action&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">saved</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">checkpoints</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">get_by_internal_session</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.checkpoint_repository.CheckpointRepository.count_checkpoints">
+<span class="sig-name descname"><span class="pre">count_checkpoints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">internal_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/checkpoint_repository.html#CheckpointRepository.count_checkpoints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.checkpoint_repository.CheckpointRepository.count_checkpoints" title="Link to this definition"></a></dt>
+<dd><p>Count checkpoints for an internal session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>internal_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the internal session.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>{‘total’: n, ‘auto’: n, ‘manual’: n}</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dictionary with counts</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.checkpoint_repository.CheckpointRepository.create">
+<span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">checkpoint</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/checkpoint_repository.html#CheckpointRepository.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.checkpoint_repository.CheckpointRepository.create" title="Link to this definition"></a></dt>
+<dd><p>Create a new checkpoint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>checkpoint</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="agentgit.checkpoints.html#agentgit.checkpoints.checkpoint.Checkpoint" title="agentgit.checkpoints.checkpoint.Checkpoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">Checkpoint</span></code></a></span>) – Checkpoint object to create.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="agentgit.checkpoints.html#agentgit.checkpoints.checkpoint.Checkpoint" title="agentgit.checkpoints.checkpoint.Checkpoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">Checkpoint</span></code></a></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The created checkpoint with id populated.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.checkpoint_repository.CheckpointRepository.delete">
+<span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">checkpoint_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/checkpoint_repository.html#CheckpointRepository.delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.checkpoint_repository.CheckpointRepository.delete" title="Link to this definition"></a></dt>
+<dd><p>Delete a checkpoint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>checkpoint_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the checkpoint to delete.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if deletion successful, False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.checkpoint_repository.CheckpointRepository.delete_auto_checkpoints">
+<span class="sig-name descname"><span class="pre">delete_auto_checkpoints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">internal_session_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_latest</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/checkpoint_repository.html#CheckpointRepository.delete_auto_checkpoints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.checkpoint_repository.CheckpointRepository.delete_auto_checkpoints" title="Link to this definition"></a></dt>
+<dd><p>Delete old automatic checkpoints, keeping only the most recent ones.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>internal_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the internal session.</p></li>
+<li><p><strong>keep_latest</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Number of latest auto checkpoints to keep.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Number of checkpoints deleted.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.checkpoint_repository.CheckpointRepository.get_by_id">
+<span class="sig-name descname"><span class="pre">get_by_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">checkpoint_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/checkpoint_repository.html#CheckpointRepository.get_by_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.checkpoint_repository.CheckpointRepository.get_by_id" title="Link to this definition"></a></dt>
+<dd><p>Get a checkpoint by ID.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>checkpoint_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the checkpoint to retrieve.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="agentgit.checkpoints.html#agentgit.checkpoints.checkpoint.Checkpoint" title="agentgit.checkpoints.checkpoint.Checkpoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">Checkpoint</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Checkpoint if found, None otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.checkpoint_repository.CheckpointRepository.get_by_internal_session">
+<span class="sig-name descname"><span class="pre">get_by_internal_session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">internal_session_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auto_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/checkpoint_repository.html#CheckpointRepository.get_by_internal_session"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.checkpoint_repository.CheckpointRepository.get_by_internal_session" title="Link to this definition"></a></dt>
+<dd><p>Get all checkpoints for an internal session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>internal_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the internal session.</p></li>
+<li><p><strong>auto_only</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – If True, only return automatic checkpoints.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="agentgit.checkpoints.html#agentgit.checkpoints.checkpoint.Checkpoint" title="agentgit.checkpoints.checkpoint.Checkpoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">Checkpoint</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of Checkpoint objects, ordered by created_at descending.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.checkpoint_repository.CheckpointRepository.get_by_user">
+<span class="sig-name descname"><span class="pre">get_by_user</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/checkpoint_repository.html#CheckpointRepository.get_by_user"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.checkpoint_repository.CheckpointRepository.get_by_user" title="Link to this definition"></a></dt>
+<dd><p>Get all checkpoints for a specific user.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>user_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the user.</p></li>
+<li><p><strong>limit</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span>) – Optional limit on number of checkpoints to return.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="agentgit.checkpoints.html#agentgit.checkpoints.checkpoint.Checkpoint" title="agentgit.checkpoints.checkpoint.Checkpoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">Checkpoint</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of Checkpoint objects, ordered by created_at descending.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.checkpoint_repository.CheckpointRepository.get_checkpoints_with_tools">
+<span class="sig-name descname"><span class="pre">get_checkpoints_with_tools</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">internal_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/checkpoint_repository.html#CheckpointRepository.get_checkpoints_with_tools"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.checkpoint_repository.CheckpointRepository.get_checkpoints_with_tools" title="Link to this definition"></a></dt>
+<dd><p>Get checkpoints that have tool invocations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>internal_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the internal session.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="agentgit.checkpoints.html#agentgit.checkpoints.checkpoint.Checkpoint" title="agentgit.checkpoints.checkpoint.Checkpoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">Checkpoint</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of Checkpoint objects that have tool invocations.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.checkpoint_repository.CheckpointRepository.get_latest_checkpoint">
+<span class="sig-name descname"><span class="pre">get_latest_checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">internal_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/checkpoint_repository.html#CheckpointRepository.get_latest_checkpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.checkpoint_repository.CheckpointRepository.get_latest_checkpoint" title="Link to this definition"></a></dt>
+<dd><p>Get the most recent checkpoint for an internal session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>internal_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the internal session.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="agentgit.checkpoints.html#agentgit.checkpoints.checkpoint.Checkpoint" title="agentgit.checkpoints.checkpoint.Checkpoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">Checkpoint</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The latest Checkpoint if found, None otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.checkpoint_repository.CheckpointRepository.search_checkpoints">
+<span class="sig-name descname"><span class="pre">search_checkpoints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">internal_session_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_term</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/checkpoint_repository.html#CheckpointRepository.search_checkpoints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.checkpoint_repository.CheckpointRepository.search_checkpoints" title="Link to this definition"></a></dt>
+<dd><p>Search checkpoints by name or content.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>internal_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the internal session.</p></li>
+<li><p><strong>search_term</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Term to search for in checkpoint names.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="agentgit.checkpoints.html#agentgit.checkpoints.checkpoint.Checkpoint" title="agentgit.checkpoints.checkpoint.Checkpoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">Checkpoint</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of matching Checkpoint objects.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.checkpoint_repository.CheckpointRepository.update_checkpoint_metadata">
+<span class="sig-name descname"><span class="pre">update_checkpoint_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">checkpoint_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/checkpoint_repository.html#CheckpointRepository.update_checkpoint_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.checkpoint_repository.CheckpointRepository.update_checkpoint_metadata" title="Link to this definition"></a></dt>
+<dd><p>Update the metadata of a checkpoint.</p>
+<p>Useful for updating tool track positions or other metadata after creation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>checkpoint_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the checkpoint to update.</p></li>
+<li><p><strong>metadata</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></span>) – New metadata to merge with existing metadata.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if update successful, False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-agentgit.database.repositories.external_session_repository">
+<span id="agentgit-database-repositories-external-session-repository-module"></span><h2>agentgit.database.repositories.external_session_repository module<a class="headerlink" href="#module-agentgit.database.repositories.external_session_repository" title="Link to this heading"></a></h2>
+<p>Repository for external session database operations.</p>
+<p>Handles CRUD operations for external sessions in the LangGraph rollback agent system.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="agentgit.database.repositories.external_session_repository.ExternalSessionRepository">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">agentgit.database.repositories.external_session_repository.</span></span><span class="sig-name descname"><span class="pre">ExternalSessionRepository</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">db_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/external_session_repository.html#ExternalSessionRepository"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.external_session_repository.ExternalSessionRepository" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Repository for ExternalSession CRUD operations with SQLite.</p>
+<p>Manages external sessions which are the user-visible conversation containers.
+Each external session can contain multiple internal sessions with branching support.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.database.repositories.external_session_repository.ExternalSessionRepository.db_path">
+<span class="sig-name descname"><span class="pre">db_path</span></span><a class="headerlink" href="#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.db_path" title="Link to this definition"></a></dt>
+<dd><p>Path to the SQLite database file.</p>
+</dd></dl>
+
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">repo</span> <span class="o">=</span> <span class="n">ExternalSessionRepository</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">session</span> <span class="o">=</span> <span class="n">ExternalSession</span><span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">session_name</span><span class="o">=</span><span class="s2">&quot;My Chat&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">saved_session</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">session</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sessions</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">get_user_sessions</span><span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.external_session_repository.ExternalSessionRepository.add_internal_session">
+<span class="sig-name descname"><span class="pre">add_internal_session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">external_session_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">langgraph_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/external_session_repository.html#ExternalSessionRepository.add_internal_session"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.add_internal_session" title="Link to this definition"></a></dt>
+<dd><p>Add an internal langgraph session to an external session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>external_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the external session.</p></li>
+<li><p><strong>langgraph_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The langgraph session ID to add.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if successful, False if external session not found.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.external_session_repository.ExternalSessionRepository.check_ownership">
+<span class="sig-name descname"><span class="pre">check_ownership</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/external_session_repository.html#ExternalSessionRepository.check_ownership"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.check_ownership" title="Link to this definition"></a></dt>
+<dd><p>Check if a user owns a specific session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the session.</p></li>
+<li><p><strong>user_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the user.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if the user owns the session, False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.external_session_repository.ExternalSessionRepository.count_user_sessions">
+<span class="sig-name descname"><span class="pre">count_user_sessions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">active_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/external_session_repository.html#ExternalSessionRepository.count_user_sessions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.count_user_sessions" title="Link to this definition"></a></dt>
+<dd><p>Count the number of sessions a user has.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>user_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the user.</p></li>
+<li><p><strong>active_only</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – If True, only count active sessions.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The number of sessions.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.external_session_repository.ExternalSessionRepository.create">
+<span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/external_session_repository.html#ExternalSessionRepository.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.create" title="Link to this definition"></a></dt>
+<dd><p>Create a new external session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>session</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="agentgit.sessions.html#agentgit.sessions.external_session.ExternalSession" title="agentgit.sessions.external_session.ExternalSession"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExternalSession</span></code></a></span>) – ExternalSession object to create.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="agentgit.sessions.html#agentgit.sessions.external_session.ExternalSession" title="agentgit.sessions.external_session.ExternalSession"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExternalSession</span></code></a></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The created session with id populated.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>sqlite3.IntegrityError</strong> – If user_id doesn’t exist.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.external_session_repository.ExternalSessionRepository.deactivate">
+<span class="sig-name descname"><span class="pre">deactivate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/external_session_repository.html#ExternalSessionRepository.deactivate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.deactivate" title="Link to this definition"></a></dt>
+<dd><p>Deactivate an external session (soft delete).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the session to deactivate.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if deactivation successful, False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.external_session_repository.ExternalSessionRepository.delete">
+<span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/external_session_repository.html#ExternalSessionRepository.delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.delete" title="Link to this definition"></a></dt>
+<dd><p>Permanently delete an external session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the session to delete.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if deletion successful, False otherwise.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This will cascade delete all internal sessions and checkpoints
+associated with this external session.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.external_session_repository.ExternalSessionRepository.get_by_id">
+<span class="sig-name descname"><span class="pre">get_by_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/external_session_repository.html#ExternalSessionRepository.get_by_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.get_by_id" title="Link to this definition"></a></dt>
+<dd><p>Get an external session by ID.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the session to retrieve.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="agentgit.sessions.html#agentgit.sessions.external_session.ExternalSession" title="agentgit.sessions.external_session.ExternalSession"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExternalSession</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ExternalSession if found, None otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.external_session_repository.ExternalSessionRepository.get_by_internal_session">
+<span class="sig-name descname"><span class="pre">get_by_internal_session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">langgraph_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/external_session_repository.html#ExternalSessionRepository.get_by_internal_session"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.get_by_internal_session" title="Link to this definition"></a></dt>
+<dd><p>Find the external session containing a specific internal langgraph session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>langgraph_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The langgraph session ID to search for.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="agentgit.sessions.html#agentgit.sessions.external_session.ExternalSession" title="agentgit.sessions.external_session.ExternalSession"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExternalSession</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ExternalSession containing the internal session, None if not found.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.external_session_repository.ExternalSessionRepository.get_user_sessions">
+<span class="sig-name descname"><span class="pre">get_user_sessions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">active_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/external_session_repository.html#ExternalSessionRepository.get_user_sessions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.get_user_sessions" title="Link to this definition"></a></dt>
+<dd><p>Get all sessions for a user.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>user_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the user.</p></li>
+<li><p><strong>active_only</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – If True, only return active sessions.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="agentgit.sessions.html#agentgit.sessions.external_session.ExternalSession" title="agentgit.sessions.external_session.ExternalSession"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExternalSession</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of ExternalSession objects, ordered by created_at descending.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.external_session_repository.ExternalSessionRepository.set_current_internal_session">
+<span class="sig-name descname"><span class="pre">set_current_internal_session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">external_session_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">langgraph_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/external_session_repository.html#ExternalSessionRepository.set_current_internal_session"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.set_current_internal_session" title="Link to this definition"></a></dt>
+<dd><p>Set the current internal session for an external session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>external_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the external session.</p></li>
+<li><p><strong>langgraph_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The langgraph session ID to set as current.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if successful, False if session not found or langgraph_session_id not in list.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.external_session_repository.ExternalSessionRepository.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/external_session_repository.html#ExternalSessionRepository.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.update" title="Link to this definition"></a></dt>
+<dd><p>Update an existing external session.</p>
+<p>Updates all session data including internal session IDs and current session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>session</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="agentgit.sessions.html#agentgit.sessions.external_session.ExternalSession" title="agentgit.sessions.external_session.ExternalSession"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExternalSession</span></code></a></span>) – ExternalSession object with updated data.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if update successful, False if session not found.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-agentgit.database.repositories.internal_session_repository">
+<span id="agentgit-database-repositories-internal-session-repository-module"></span><h2>agentgit.database.repositories.internal_session_repository module<a class="headerlink" href="#module-agentgit.database.repositories.internal_session_repository" title="Link to this heading"></a></h2>
+<p>Repository for internal session database operations.</p>
+<p>Handles CRUD operations for internal langgraph sessions in the rollback agent system.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="agentgit.database.repositories.internal_session_repository.InternalSessionRepository">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">agentgit.database.repositories.internal_session_repository.</span></span><span class="sig-name descname"><span class="pre">InternalSessionRepository</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">db_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/internal_session_repository.html#InternalSessionRepository"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.internal_session_repository.InternalSessionRepository" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Repository for InternalSession CRUD operations with SQLite.</p>
+<p>Manages internal langgraph sessions which are the actual agent sessions
+running within external sessions.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.database.repositories.internal_session_repository.InternalSessionRepository.db_path">
+<span class="sig-name descname"><span class="pre">db_path</span></span><a class="headerlink" href="#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.db_path" title="Link to this definition"></a></dt>
+<dd><p>Path to the SQLite database file.</p>
+</dd></dl>
+
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">repo</span> <span class="o">=</span> <span class="n">InternalSessionRepository</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">session</span> <span class="o">=</span> <span class="n">InternalSession</span><span class="p">(</span><span class="n">external_session_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">langgraph_session_id</span><span class="o">=</span><span class="s2">&quot;langgraph_123&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">saved</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">session</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sessions</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">get_by_external_session</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.internal_session_repository.InternalSessionRepository.count_sessions">
+<span class="sig-name descname"><span class="pre">count_sessions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">external_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/internal_session_repository.html#InternalSessionRepository.count_sessions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.count_sessions" title="Link to this definition"></a></dt>
+<dd><p>Count internal sessions for an external session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>external_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the external session.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Number of internal sessions.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.internal_session_repository.InternalSessionRepository.create">
+<span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/internal_session_repository.html#InternalSessionRepository.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.create" title="Link to this definition"></a></dt>
+<dd><p>Create a new internal session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>session</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="agentgit.sessions.html#agentgit.sessions.internal_session.InternalSession" title="agentgit.sessions.internal_session.InternalSession"><code class="xref py py-class docutils literal notranslate"><span class="pre">InternalSession</span></code></a></span>) – InternalSession object to create.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="agentgit.sessions.html#agentgit.sessions.internal_session.InternalSession" title="agentgit.sessions.internal_session.InternalSession"><code class="xref py py-class docutils literal notranslate"><span class="pre">InternalSession</span></code></a></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The created session with id populated.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.internal_session_repository.InternalSessionRepository.delete">
+<span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/internal_session_repository.html#InternalSessionRepository.delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.delete" title="Link to this definition"></a></dt>
+<dd><p>Delete an internal session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the session to delete.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if deletion successful, False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_branch_sessions">
+<span class="sig-name descname"><span class="pre">get_branch_sessions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/internal_session_repository.html#InternalSessionRepository.get_branch_sessions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_branch_sessions" title="Link to this definition"></a></dt>
+<dd><p>Get all sessions branched from a parent session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>parent_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the parent session.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="agentgit.sessions.html#agentgit.sessions.internal_session.InternalSession" title="agentgit.sessions.internal_session.InternalSession"><code class="xref py py-class docutils literal notranslate"><span class="pre">InternalSession</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of InternalSession objects branched from the parent.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_by_external_session">
+<span class="sig-name descname"><span class="pre">get_by_external_session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">external_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/internal_session_repository.html#InternalSessionRepository.get_by_external_session"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_by_external_session" title="Link to this definition"></a></dt>
+<dd><p>Get all internal sessions for an external session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>external_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the external session.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="agentgit.sessions.html#agentgit.sessions.internal_session.InternalSession" title="agentgit.sessions.internal_session.InternalSession"><code class="xref py py-class docutils literal notranslate"><span class="pre">InternalSession</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of InternalSession objects, ordered by created_at descending.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_by_id">
+<span class="sig-name descname"><span class="pre">get_by_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/internal_session_repository.html#InternalSessionRepository.get_by_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_by_id" title="Link to this definition"></a></dt>
+<dd><p>Get an internal session by ID.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the session to retrieve.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="agentgit.sessions.html#agentgit.sessions.internal_session.InternalSession" title="agentgit.sessions.internal_session.InternalSession"><code class="xref py py-class docutils literal notranslate"><span class="pre">InternalSession</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>InternalSession if found, None otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_by_langgraph_session_id">
+<span class="sig-name descname"><span class="pre">get_by_langgraph_session_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">langgraph_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/internal_session_repository.html#InternalSessionRepository.get_by_langgraph_session_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_by_langgraph_session_id" title="Link to this definition"></a></dt>
+<dd><p>Get an internal session by langgraph session ID.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>langgraph_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The langgraph session ID.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="agentgit.sessions.html#agentgit.sessions.internal_session.InternalSession" title="agentgit.sessions.internal_session.InternalSession"><code class="xref py py-class docutils literal notranslate"><span class="pre">InternalSession</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>InternalSession if found, None otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_current_session">
+<span class="sig-name descname"><span class="pre">get_current_session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">external_session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/internal_session_repository.html#InternalSessionRepository.get_current_session"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_current_session" title="Link to this definition"></a></dt>
+<dd><p>Get the current internal session for an external session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>external_session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the external session.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="agentgit.sessions.html#agentgit.sessions.internal_session.InternalSession" title="agentgit.sessions.internal_session.InternalSession"><code class="xref py py-class docutils literal notranslate"><span class="pre">InternalSession</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The current InternalSession if found, None otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_session_lineage">
+<span class="sig-name descname"><span class="pre">get_session_lineage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/internal_session_repository.html#InternalSessionRepository.get_session_lineage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.get_session_lineage" title="Link to this definition"></a></dt>
+<dd><p>Get the lineage of a session (path from root to this session).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the session.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="agentgit.sessions.html#agentgit.sessions.internal_session.InternalSession" title="agentgit.sessions.internal_session.InternalSession"><code class="xref py py-class docutils literal notranslate"><span class="pre">InternalSession</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of InternalSession objects from root to current session.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.internal_session_repository.InternalSessionRepository.set_current_session">
+<span class="sig-name descname"><span class="pre">set_current_session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/internal_session_repository.html#InternalSessionRepository.set_current_session"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.set_current_session" title="Link to this definition"></a></dt>
+<dd><p>Set an internal session as the current one for its external session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the session to set as current.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if successful, False if session not found.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.internal_session_repository.InternalSessionRepository.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/internal_session_repository.html#InternalSessionRepository.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.update" title="Link to this definition"></a></dt>
+<dd><p>Update an existing internal session.</p>
+<p>Updates session state and conversation history.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>session</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="agentgit.sessions.html#agentgit.sessions.internal_session.InternalSession" title="agentgit.sessions.internal_session.InternalSession"><code class="xref py py-class docutils literal notranslate"><span class="pre">InternalSession</span></code></a></span>) – InternalSession object with updated data.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if update successful, False if session not found.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.internal_session_repository.InternalSessionRepository.update_tool_count">
+<span class="sig-name descname"><span class="pre">update_tool_count</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">increment</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/internal_session_repository.html#InternalSessionRepository.update_tool_count"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.internal_session_repository.InternalSessionRepository.update_tool_count" title="Link to this definition"></a></dt>
+<dd><p>Update the tool invocation count for a session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>session_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the session.</p></li>
+<li><p><strong>increment</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Amount to increment by.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if update successful, False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-agentgit.database.repositories.user_repository">
+<span id="agentgit-database-repositories-user-repository-module"></span><h2>agentgit.database.repositories.user_repository module<a class="headerlink" href="#module-agentgit.database.repositories.user_repository" title="Link to this heading"></a></h2>
+<p>User repository for database operations.</p>
+<p>Provides ORM functionality for User entities with SQLite backend.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="agentgit.database.repositories.user_repository.UserRepository">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">agentgit.database.repositories.user_repository.</span></span><span class="sig-name descname"><span class="pre">UserRepository</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">db_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/user_repository.html#UserRepository"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.user_repository.UserRepository" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Repository for User CRUD operations with SQLite.</p>
+<p>This class handles all database operations for User entities,
+including automatic initialization of the database schema and
+creation of the default admin user (rootusr).</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="agentgit.database.repositories.user_repository.UserRepository.db_path">
+<span class="sig-name descname"><span class="pre">db_path</span></span><a class="headerlink" href="#agentgit.database.repositories.user_repository.UserRepository.db_path" title="Link to this definition"></a></dt>
+<dd><p>Path to the SQLite database file.</p>
+</dd></dl>
+
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">repo</span> <span class="o">=</span> <span class="n">UserRepository</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s2">&quot;alice&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">user</span><span class="o">.</span><span class="n">set_password</span><span class="p">(</span><span class="s2">&quot;secret&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">saved_user</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">found_user</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">find_by_username</span><span class="p">(</span><span class="s2">&quot;alice&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">found_user</span><span class="o">.</span><span class="n">verify_password</span><span class="p">(</span><span class="s2">&quot;secret&quot;</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.user_repository.UserRepository.cleanup_inactive_sessions">
+<span class="sig-name descname"><span class="pre">cleanup_inactive_sessions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">active_session_ids</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/user_repository.html#UserRepository.cleanup_inactive_sessions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.user_repository.UserRepository.cleanup_inactive_sessions" title="Link to this definition"></a></dt>
+<dd><p>Clean up inactive sessions for a user.</p>
+<p>Removes session IDs that are no longer active from the user’s active_sessions list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>user_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the user.</p></li>
+<li><p><strong>active_session_ids</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span>) – List of session IDs that are still active.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if cleanup was performed, False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.user_repository.UserRepository.delete">
+<span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/user_repository.html#UserRepository.delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.user_repository.UserRepository.delete" title="Link to this definition"></a></dt>
+<dd><p>Delete a user from the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>user_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the user to delete.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if a user was deleted, False if no user found.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.user_repository.UserRepository.find_all">
+<span class="sig-name descname"><span class="pre">find_all</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/user_repository.html#UserRepository.find_all"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.user_repository.UserRepository.find_all" title="Link to this definition"></a></dt>
+<dd><p>Retrieve all users from the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="agentgit.auth.html#agentgit.auth.user.User" title="agentgit.auth.user.User"><code class="xref py py-class docutils literal notranslate"><span class="pre">User</span></code></a>]</span></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of all User objects in the database.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.user_repository.UserRepository.find_by_api_key">
+<span class="sig-name descname"><span class="pre">find_by_api_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">api_key</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/user_repository.html#UserRepository.find_by_api_key"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.user_repository.UserRepository.find_by_api_key" title="Link to this definition"></a></dt>
+<dd><p>Find a user by their API key.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>api_key</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The API key to search for.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="agentgit.auth.html#agentgit.auth.user.User" title="agentgit.auth.user.User"><code class="xref py py-class docutils literal notranslate"><span class="pre">User</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>User object if found, None otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.user_repository.UserRepository.find_by_id">
+<span class="sig-name descname"><span class="pre">find_by_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/user_repository.html#UserRepository.find_by_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.user_repository.UserRepository.find_by_id" title="Link to this definition"></a></dt>
+<dd><p>Find a user by their database ID.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>user_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The unique identifier of the user.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="agentgit.auth.html#agentgit.auth.user.User" title="agentgit.auth.user.User"><code class="xref py py-class docutils literal notranslate"><span class="pre">User</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>User object if found, None otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.user_repository.UserRepository.find_by_username">
+<span class="sig-name descname"><span class="pre">find_by_username</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">username</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/user_repository.html#UserRepository.find_by_username"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.user_repository.UserRepository.find_by_username" title="Link to this definition"></a></dt>
+<dd><p>Find a user by their username.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>username</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The username to search for.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="agentgit.auth.html#agentgit.auth.user.User" title="agentgit.auth.user.User"><code class="xref py py-class docutils literal notranslate"><span class="pre">User</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>User object if found, None otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.user_repository.UserRepository.get_user_sessions">
+<span class="sig-name descname"><span class="pre">get_user_sessions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/user_repository.html#UserRepository.get_user_sessions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.user_repository.UserRepository.get_user_sessions" title="Link to this definition"></a></dt>
+<dd><p>Get all active session IDs for a user.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>user_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the user.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of active session IDs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.user_repository.UserRepository.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/user_repository.html#UserRepository.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.user_repository.UserRepository.save" title="Link to this definition"></a></dt>
+<dd><p>Save or update a user in the database.</p>
+<p>Performs insert if user.id is None, otherwise updates existing record.
+Stores both structured fields and full JSON representation for flexibility.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>user</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="agentgit.auth.html#agentgit.auth.user.User" title="agentgit.auth.user.User"><code class="xref py py-class docutils literal notranslate"><span class="pre">User</span></code></a></span>) – User object to save.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="agentgit.auth.html#agentgit.auth.user.User" title="agentgit.auth.user.User"><code class="xref py py-class docutils literal notranslate"><span class="pre">User</span></code></a></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The saved User object with id populated if newly created.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Password hash is stored separately from the JSON data for security.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.user_repository.UserRepository.update_api_key">
+<span class="sig-name descname"><span class="pre">update_api_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api_key</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/user_repository.html#UserRepository.update_api_key"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.user_repository.UserRepository.update_api_key" title="Link to this definition"></a></dt>
+<dd><p>Update or remove a user’s API key.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>user_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the user to update.</p></li>
+<li><p><strong>api_key</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – New API key or None to remove.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if updated successfully, False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.user_repository.UserRepository.update_last_login">
+<span class="sig-name descname"><span class="pre">update_last_login</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/user_repository.html#UserRepository.update_last_login"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.user_repository.UserRepository.update_last_login" title="Link to this definition"></a></dt>
+<dd><p>Update the last login timestamp for a user.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>user_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the user to update.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if updated successfully, False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.user_repository.UserRepository.update_user_preferences">
+<span class="sig-name descname"><span class="pre">update_user_preferences</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preferences</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/user_repository.html#UserRepository.update_user_preferences"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.user_repository.UserRepository.update_user_preferences" title="Link to this definition"></a></dt>
+<dd><p>Update user preferences.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>user_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the user.</p></li>
+<li><p><strong>preferences</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></span>) – Dictionary of preferences to update.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if updated successfully, False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="agentgit.database.repositories.user_repository.UserRepository.update_user_sessions">
+<span class="sig-name descname"><span class="pre">update_user_sessions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">session_ids</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/agentgit/database/repositories/user_repository.html#UserRepository.update_user_sessions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#agentgit.database.repositories.user_repository.UserRepository.update_user_sessions" title="Link to this definition"></a></dt>
+<dd><p>Update the active sessions list for a user.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>user_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The ID of the user.</p></li>
+<li><p><strong>session_ids</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span>) – New list of active session IDs.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if updated successfully, False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-agentgit.database.repositories">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-agentgit.database.repositories" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="agentgit.database.html" class="btn btn-neutral float-left" title="agentgit.database package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="agentgit.sessions.html" class="btn btn-neutral float-right" title="agentgit.sessions package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Li Yang, Wang Siyuan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

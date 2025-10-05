@@ -1,0 +1,1114 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>agentgit.agents.rollback_agent &mdash; Agent Git 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Agent Git
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">agentgit</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Agent Git</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">agentgit.agents.rollback_agent</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for agentgit.agents.rollback_agent</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;LangGraph Agent with rollback capabilities.</span>
+
+<span class="sd">Implements a checkpoint-based rollback system for LangGraph agents with</span>
+<span class="sd">time-travel through conversation states and full execution history preservation.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Annotated</span><span class="p">,</span> <span class="n">TypedDict</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">operator</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">wraps</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.messages</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseMessage</span><span class="p">,</span> <span class="n">HumanMessage</span><span class="p">,</span> <span class="n">AIMessage</span><span class="p">,</span> <span class="n">SystemMessage</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.tools</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseTool</span><span class="p">,</span> <span class="n">tool</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langgraph.graph</span><span class="w"> </span><span class="kn">import</span> <span class="n">StateGraph</span><span class="p">,</span> <span class="n">END</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langgraph.prebuilt</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolNode</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langgraph.checkpoint.memory</span><span class="w"> </span><span class="kn">import</span> <span class="n">MemorySaver</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.runnables</span><span class="w"> </span><span class="kn">import</span> <span class="n">RunnableConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.sessions.internal_session</span><span class="w"> </span><span class="kn">import</span> <span class="n">InternalSession</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.checkpoints.checkpoint</span><span class="w"> </span><span class="kn">import</span> <span class="n">Checkpoint</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.database.repositories.external_session_repository</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExternalSessionRepository</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.database.repositories.internal_session_repository</span><span class="w"> </span><span class="kn">import</span> <span class="n">InternalSessionRepository</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.database.repositories.checkpoint_repository</span><span class="w"> </span><span class="kn">import</span> <span class="n">CheckpointRepository</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.auth.user</span><span class="w"> </span><span class="kn">import</span> <span class="n">User</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.core.rollback_protocol</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolRollbackRegistry</span><span class="p">,</span> <span class="n">ToolSpec</span>
+
+
+<div class="viewcode-block" id="AgentState">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.AgentState">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AgentState</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;State definition for the LangGraph agent.</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        messages: Conversation history as list of messages</span>
+<span class="sd">        session_state: Custom session state dictionary</span>
+<span class="sd">        tool_invocations: History of tool invocations</span>
+<span class="sd">        rollback_requested: Flag indicating if rollback was requested</span>
+<span class="sd">        rollback_checkpoint_id: ID of checkpoint to rollback to</span>
+<span class="sd">        current_turn: Current conversation turn number</span>
+<span class="sd">        user_id: ID of the user owning this session</span>
+<span class="sd">        user_preferences: User preferences for agent behavior</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">messages</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">BaseMessage</span><span class="p">],</span> <span class="n">operator</span><span class="o">.</span><span class="n">add</span><span class="p">]</span>
+    <span class="n">session_state</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+    <span class="n">tool_invocations</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span>
+    <span class="n">rollback_requested</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">rollback_checkpoint_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+    <span class="n">current_turn</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">user_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+    <span class="n">user_preferences</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="RollbackAgent">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">RollbackAgent</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LangGraph agent with checkpoint and rollback capabilities.</span>
+<span class="sd">    </span>
+<span class="sd">    Implements automatic checkpoint creation, database persistence, and</span>
+<span class="sd">    non-destructive rollback with branch preservation.</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        external_session_id: ID of the external session this agent belongs to</span>
+<span class="sd">        internal_session: Current internal session being used</span>
+<span class="sd">        auto_checkpoint: Whether to automatically create checkpoints after tool calls</span>
+<span class="sd">        graph: The compiled LangGraph workflow</span>
+<span class="sd">        tool_rollback_registry: Registry for tool rollback operations</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">external_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">,</span>
+        <span class="n">tools</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">BaseTool</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">auto_checkpoint</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">internal_session_repo</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">InternalSessionRepository</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">checkpoint_repo</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">CheckpointRepository</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">checkpointer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">MemorySaver</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">skip_session_creation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">reverse_tools</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">user</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">User</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the RollbackAgent.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            external_session_id: ID of the external session</span>
+<span class="sd">            model: The LangChain model to use (e.g., ChatOpenAI)</span>
+<span class="sd">            tools: List of tools available to the agent</span>
+<span class="sd">            auto_checkpoint: Whether to auto-checkpoint after tool calls</span>
+<span class="sd">            internal_session_repo: Repository for internal session operations</span>
+<span class="sd">            checkpoint_repo: Repository for checkpoint operations</span>
+<span class="sd">            checkpointer: LangGraph checkpointer for state persistence</span>
+<span class="sd">            skip_session_creation: Skip creating a new internal session (for resume/rollback)</span>
+<span class="sd">            reverse_tools: Mapping of tool names to their reverse functions</span>
+<span class="sd">            user: Optional User object for user-specific configuration</span>
+<span class="sd">            **kwargs: Additional configuration options</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">external_session_id</span> <span class="o">=</span> <span class="n">external_session_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">user</span> <span class="o">=</span> <span class="n">user</span>
+        
+        <span class="c1"># Apply user preferences if user is provided</span>
+        <span class="k">if</span> <span class="n">user</span><span class="p">:</span>
+            <span class="n">agent_config</span> <span class="o">=</span> <span class="n">user</span><span class="o">.</span><span class="n">get_agent_config</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">auto_checkpoint</span> <span class="o">=</span> <span class="n">agent_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;auto_checkpoint&quot;</span><span class="p">,</span> <span class="n">auto_checkpoint</span><span class="p">)</span>
+            <span class="c1"># Configure model with user preferences</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s1">&#39;temperature&#39;</span><span class="p">):</span>
+                <span class="n">model</span><span class="o">.</span><span class="n">temperature</span> <span class="o">=</span> <span class="n">agent_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s1">&#39;max_tokens&#39;</span><span class="p">):</span>
+                <span class="n">model</span><span class="o">.</span><span class="n">max_tokens</span> <span class="o">=</span> <span class="n">agent_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;max_tokens&quot;</span><span class="p">,</span> <span class="mi">2000</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">auto_checkpoint</span> <span class="o">=</span> <span class="n">auto_checkpoint</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">tools</span> <span class="o">=</span> <span class="n">tools</span> <span class="ow">or</span> <span class="p">[]</span>
+        
+        <span class="c1"># Generate unique session ID</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">langgraph_session_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;langgraph_</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">[:</span><span class="mi">12</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+        
+        <span class="c1"># Initialize repositories</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">internal_session_repo</span> <span class="o">=</span> <span class="n">internal_session_repo</span> <span class="ow">or</span> <span class="n">InternalSessionRepository</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span> <span class="o">=</span> <span class="n">checkpoint_repo</span> <span class="ow">or</span> <span class="n">CheckpointRepository</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">external_session_repo</span> <span class="o">=</span> <span class="n">ExternalSessionRepository</span><span class="p">()</span>
+        
+        <span class="c1"># Set up checkpointer (Memory by default)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">checkpointer</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer</span> <span class="o">=</span> <span class="n">MemorySaver</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer</span> <span class="o">=</span> <span class="n">checkpointer</span>
+        
+        <span class="c1"># Initialize tool rollback registry</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span> <span class="o">=</span> <span class="n">ToolRollbackRegistry</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_reverse_tools_map</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">reverse_tools</span> <span class="ow">or</span> <span class="p">{})</span>
+        
+        <span class="c1"># Register tools with reverse handlers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_register_reversible_tools</span><span class="p">()</span>
+        
+        <span class="c1"># Add checkpoint management tools</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_checkpoint_tools</span><span class="p">()</span>
+        
+        <span class="c1"># Build the LangGraph workflow</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_graph</span><span class="p">()</span>
+        
+        <span class="c1"># Create internal session if not skipping</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">skip_session_creation</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_internal_session</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_register_with_external_session</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="o">=</span> <span class="kc">None</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">StateGraph</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build the LangGraph workflow.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Compiled StateGraph ready for execution</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">workflow</span> <span class="o">=</span> <span class="n">StateGraph</span><span class="p">(</span><span class="n">AgentState</span><span class="p">)</span>
+        
+        <span class="c1"># Add nodes</span>
+        <span class="n">workflow</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;agent&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_agent_node</span><span class="p">)</span>
+        <span class="n">workflow</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;tools&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tool_node</span><span class="p">)</span>
+        <span class="n">workflow</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;checkpoint&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_checkpoint_node</span><span class="p">)</span>
+        
+        <span class="c1"># Set entry point</span>
+        <span class="n">workflow</span><span class="o">.</span><span class="n">set_entry_point</span><span class="p">(</span><span class="s2">&quot;agent&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Add edges</span>
+        <span class="n">workflow</span><span class="o">.</span><span class="n">add_conditional_edges</span><span class="p">(</span>
+            <span class="s2">&quot;agent&quot;</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_should_use_tools</span><span class="p">,</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;tools&quot;</span><span class="p">:</span> <span class="s2">&quot;tools&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;checkpoint&quot;</span><span class="p">:</span> <span class="s2">&quot;checkpoint&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;end&quot;</span><span class="p">:</span> <span class="n">END</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Route from tools to checkpoint if auto_checkpoint is enabled</span>
+        <span class="c1"># Otherwise go directly back to agent</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">auto_checkpoint</span><span class="p">:</span>
+            <span class="n">workflow</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="s2">&quot;tools&quot;</span><span class="p">,</span> <span class="s2">&quot;checkpoint&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">workflow</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="s2">&quot;tools&quot;</span><span class="p">,</span> <span class="s2">&quot;agent&quot;</span><span class="p">)</span>
+            
+        <span class="n">workflow</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="s2">&quot;checkpoint&quot;</span><span class="p">,</span> <span class="s2">&quot;agent&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Compile with checkpointer</span>
+        <span class="k">return</span> <span class="n">workflow</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">checkpointer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">checkpointer</span><span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_agent_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">AgentState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Agent node that processes messages and decides on actions.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            state: Current agent state</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Updated state with agent&#39;s response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">messages</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">&quot;messages&quot;</span><span class="p">]</span>
+        
+        <span class="c1"># Add system message with user context if available</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">user</span> <span class="ow">and</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;user_preferences&quot;</span><span class="p">):</span>
+            <span class="n">prefs</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">&quot;user_preferences&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">prefs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;system_prompt&quot;</span><span class="p">):</span>
+                <span class="n">messages</span> <span class="o">=</span> <span class="p">[</span><span class="n">SystemMessage</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="n">prefs</span><span class="p">[</span><span class="s2">&quot;system_prompt&quot;</span><span class="p">])]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">messages</span><span class="p">)</span>
+        
+        <span class="c1"># Invoke model with tools</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">bind_tools</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tools</span><span class="p">)</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="n">messages</span><span class="p">)</span>
+        
+        <span class="c1"># Update turn counter</span>
+        <span class="n">current_turn</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;current_turn&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;messages&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">response</span><span class="p">],</span>
+            <span class="s2">&quot;current_turn&quot;</span><span class="p">:</span> <span class="n">current_turn</span>
+        <span class="p">}</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_tool_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">AgentState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Tool execution node.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            state: Current agent state</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Updated state with tool results</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">messages</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">&quot;messages&quot;</span><span class="p">]</span>
+        <span class="n">last_message</span> <span class="o">=</span> <span class="n">messages</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="c1"># Create a tool node instance for execution</span>
+        <span class="n">tool_node</span> <span class="o">=</span> <span class="n">ToolNode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tools</span><span class="p">)</span>
+        <span class="n">tool_invocations</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tool_invocations&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        
+        <span class="c1"># Get tool calls from last message</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">last_message</span><span class="p">,</span> <span class="s1">&#39;tool_calls&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">last_message</span><span class="o">.</span><span class="n">tool_calls</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;messages&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;tool_invocations&quot;</span><span class="p">:</span> <span class="n">tool_invocations</span><span class="p">}</span>
+        
+        <span class="c1"># Execute the tool node with the current state</span>
+        <span class="c1"># ToolNode handles the execution internally</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># ToolNode expects the full state and returns messages</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">tool_node</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+            
+            <span class="c1"># Track tool invocations for our rollback system</span>
+            <span class="k">for</span> <span class="n">tool_call</span> <span class="ow">in</span> <span class="n">last_message</span><span class="o">.</span><span class="n">tool_calls</span><span class="p">:</span>
+                <span class="n">tool_name</span> <span class="o">=</span> <span class="n">tool_call</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
+                <span class="n">tool_args</span> <span class="o">=</span> <span class="n">tool_call</span><span class="p">[</span><span class="s2">&quot;args&quot;</span><span class="p">]</span>
+                
+                <span class="c1"># Track in registry if reversible</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">get_tool</span><span class="p">(</span><span class="n">tool_name</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">record_invocation</span><span class="p">(</span>
+                        <span class="n">tool_name</span><span class="p">,</span> <span class="n">tool_args</span><span class="p">,</span> <span class="s2">&quot;executed&quot;</span><span class="p">,</span> <span class="n">success</span><span class="o">=</span><span class="kc">True</span>
+                    <span class="p">)</span>
+                
+                <span class="c1"># Record invocation</span>
+                <span class="n">tool_invocations</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s2">&quot;tool&quot;</span><span class="p">:</span> <span class="n">tool_name</span><span class="p">,</span>
+                    <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="n">tool_args</span><span class="p">,</span>
+                    <span class="s2">&quot;result&quot;</span><span class="p">:</span> <span class="s2">&quot;executed&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                    <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+                <span class="p">})</span>
+            
+            <span class="c1"># Return the messages from ToolNode and our tracked invocations</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s2">&quot;messages&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;messages&quot;</span><span class="p">,</span> <span class="p">[]),</span>
+                <span class="s2">&quot;tool_invocations&quot;</span><span class="p">:</span> <span class="n">tool_invocations</span>
+            <span class="p">}</span>
+            
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="c1"># Handle errors</span>
+            <span class="n">error_message</span> <span class="o">=</span> <span class="n">AIMessage</span><span class="p">(</span>
+                <span class="n">content</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Tool execution error: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;tool_executor&quot;</span>
+            <span class="p">)</span>
+            
+            <span class="c1"># Track failures</span>
+            <span class="k">for</span> <span class="n">tool_call</span> <span class="ow">in</span> <span class="n">last_message</span><span class="o">.</span><span class="n">tool_calls</span><span class="p">:</span>
+                <span class="n">tool_name</span> <span class="o">=</span> <span class="n">tool_call</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
+                <span class="n">tool_args</span> <span class="o">=</span> <span class="n">tool_call</span><span class="p">[</span><span class="s2">&quot;args&quot;</span><span class="p">]</span>
+                
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">get_tool</span><span class="p">(</span><span class="n">tool_name</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">record_invocation</span><span class="p">(</span>
+                        <span class="n">tool_name</span><span class="p">,</span> <span class="n">tool_args</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">error_message</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+                    <span class="p">)</span>
+                
+                <span class="n">tool_invocations</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s2">&quot;tool&quot;</span><span class="p">:</span> <span class="n">tool_name</span><span class="p">,</span>
+                    <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="n">tool_args</span><span class="p">,</span>
+                    <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">),</span>
+                    <span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                    <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+                <span class="p">})</span>
+            
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s2">&quot;messages&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">error_message</span><span class="p">],</span>
+                <span class="s2">&quot;tool_invocations&quot;</span><span class="p">:</span> <span class="n">tool_invocations</span>
+            <span class="p">}</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_checkpoint_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">AgentState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Node that handles automatic checkpoint creation.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            state: Current agent state</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            State (unchanged, checkpoint is a side effect)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">auto_checkpoint</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="p">:</span>
+            <span class="c1"># Get last tool invocation</span>
+            <span class="n">tool_invocations</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tool_invocations&quot;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="k">if</span> <span class="n">tool_invocations</span><span class="p">:</span>
+                <span class="n">last_tool</span> <span class="o">=</span> <span class="n">tool_invocations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">tool_name</span> <span class="o">=</span> <span class="n">last_tool</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tool&quot;</span><span class="p">,</span> <span class="s2">&quot;unknown&quot;</span><span class="p">)</span>
+                
+                <span class="c1"># Skip checkpoint for checkpoint management tools</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_checkpoint_tool</span><span class="p">(</span><span class="n">tool_name</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_create_auto_checkpoint</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;After </span><span class="si">{</span><span class="n">tool_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="p">{}</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_should_use_tools</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">AgentState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Determine next node based on agent&#39;s response.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            state: Current agent state</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Next node name: &quot;tools&quot;, &quot;checkpoint&quot;, or &quot;end&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">messages</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">&quot;messages&quot;</span><span class="p">]</span>
+        <span class="n">last_message</span> <span class="o">=</span> <span class="n">messages</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="c1"># Check if tools were called</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">last_message</span><span class="p">,</span> <span class="s2">&quot;tool_calls&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">last_message</span><span class="o">.</span><span class="n">tool_calls</span><span class="p">:</span>
+            <span class="c1"># Check if we should create checkpoint after tools</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">auto_checkpoint</span><span class="p">:</span>
+                <span class="c1"># We&#39;ll handle checkpoint after tool execution</span>
+                <span class="k">return</span> <span class="s2">&quot;tools&quot;</span>
+            <span class="k">return</span> <span class="s2">&quot;tools&quot;</span>
+        
+        <span class="c1"># Check for rollback request</span>
+        <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;rollback_requested&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s2">&quot;end&quot;</span>
+        
+        <span class="k">return</span> <span class="s2">&quot;end&quot;</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_register_reversible_tools</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Register tools that have reverse handlers.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">tool</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tools</span><span class="p">:</span>
+            <span class="n">tool_name</span> <span class="o">=</span> <span class="n">tool</span><span class="o">.</span><span class="n">name</span>
+            <span class="k">if</span> <span class="n">tool_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reverse_tools_map</span><span class="p">:</span>
+                <span class="n">reverse_fn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reverse_tools_map</span><span class="p">[</span><span class="n">tool_name</span><span class="p">]</span>
+                
+                <span class="c1"># Wrap forward function</span>
+                <span class="k">def</span><span class="w"> </span><span class="nf">_forward_wrapper</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">_tool</span><span class="o">=</span><span class="n">tool</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="n">_tool</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+                
+                <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">register_tool</span><span class="p">(</span>
+                    <span class="n">ToolSpec</span><span class="p">(</span>
+                        <span class="n">name</span><span class="o">=</span><span class="n">tool_name</span><span class="p">,</span>
+                        <span class="n">forward</span><span class="o">=</span><span class="n">_forward_wrapper</span><span class="p">,</span>
+                        <span class="n">reverse</span><span class="o">=</span><span class="n">reverse_fn</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_checkpoint_tools</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add checkpoint management tools to the agent.&quot;&quot;&quot;</span>
+        <span class="n">checkpoint_tools</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_tool_wrapper</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">create_checkpoint_tool</span><span class="p">,</span> <span class="s2">&quot;create_checkpoint&quot;</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_tool_wrapper</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_checkpoints_tool</span><span class="p">,</span> <span class="s2">&quot;list_checkpoints&quot;</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_tool_wrapper</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rollback_to_checkpoint_tool</span><span class="p">,</span> <span class="s2">&quot;rollback_to_checkpoint&quot;</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_tool_wrapper</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">delete_checkpoint_tool</span><span class="p">,</span> <span class="s2">&quot;delete_checkpoint&quot;</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_tool_wrapper</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_checkpoint_info_tool</span><span class="p">,</span> <span class="s2">&quot;get_checkpoint_info&quot;</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_tool_wrapper</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cleanup_auto_checkpoints_tool</span><span class="p">,</span> <span class="s2">&quot;cleanup_auto_checkpoints&quot;</span><span class="p">)</span>
+        <span class="p">]</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">tools</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">checkpoint_tools</span><span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_tool_wrapper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BaseTool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a LangChain tool from a function.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            func: Function to wrap</span>
+<span class="sd">            name: Tool name</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            BaseTool instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.tools</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tool</span>
+        
+        <span class="c1"># Use the Tool class directly which has better Pydantic v2 support</span>
+        <span class="c1"># This avoids the compatibility layer that triggers warnings</span>
+        <span class="k">return</span> <span class="n">Tool</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">func</span><span class="o">.</span><span class="vm">__doc__</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">&quot;Tool: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">func</span><span class="o">=</span><span class="n">func</span>
+        <span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_internal_session</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">InternalSession</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a new internal session for this agent.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            The created InternalSession object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">internal_session</span> <span class="o">=</span> <span class="n">InternalSession</span><span class="p">(</span>
+            <span class="n">external_session_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">external_session_id</span><span class="p">,</span>
+            <span class="n">langgraph_session_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">langgraph_session_id</span><span class="p">,</span>  <span class="c1"># Using langgraph session ID</span>
+            <span class="n">session_state</span><span class="o">=</span><span class="p">{},</span>
+            <span class="n">created_at</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(),</span>
+            <span class="n">is_current</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session_repo</span><span class="p">:</span>
+            <span class="n">internal_session</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session_repo</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">internal_session</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">internal_session</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_register_with_external_session</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Register this internal session with the external session.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_session_repo</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">external_session_repo</span><span class="o">.</span><span class="n">add_internal_session</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">external_session_id</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">langgraph_session_id</span>
+            <span class="p">)</span>
+    
+<div class="viewcode-block" id="RollbackAgent.run">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">RunnableConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run the agent and save state after completion.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            message: The user message to process</span>
+<span class="sd">            config: Optional LangGraph configuration</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            The agent&#39;s response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Store message in conversation history</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+        
+        <span class="c1"># Track user session if user is provided</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">user</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_session_id</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">add_session</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">external_session_id</span><span class="p">)</span>
+        
+        <span class="c1"># Build messages list with full conversation history</span>
+        <span class="n">messages</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">conversation_history</span><span class="p">:</span>
+            <span class="c1"># Convert conversation history to messages (excluding the just-added user message)</span>
+            <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">conversation_history</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>  <span class="c1"># Skip last as we just added it</span>
+                <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;role&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;user&quot;</span><span class="p">:</span>
+                    <span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">HumanMessage</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="n">msg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)))</span>
+                <span class="k">elif</span> <span class="n">msg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;role&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;assistant&quot;</span><span class="p">:</span>
+                    <span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">AIMessage</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="n">msg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)))</span>
+        
+        <span class="c1"># Add the current message</span>
+        <span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">HumanMessage</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="n">message</span><span class="p">))</span>
+        
+        <span class="c1"># Create initial state</span>
+        <span class="n">initial_state</span> <span class="o">=</span> <span class="n">AgentState</span><span class="p">(</span>
+            <span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">,</span>
+            <span class="n">session_state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">session_state</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="k">else</span> <span class="p">{},</span>
+            <span class="n">tool_invocations</span><span class="o">=</span><span class="p">[],</span>
+            <span class="n">rollback_requested</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">rollback_checkpoint_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">current_turn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">conversation_history</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;user&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="n">user_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">id</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">user</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">user_preferences</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">preferences</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">user</span> <span class="k">else</span> <span class="p">{}</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Set up config with thread ID</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">config</span><span class="p">:</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">RunnableConfig</span><span class="p">(</span>
+                <span class="n">configurable</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;thread_id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">langgraph_session_id</span><span class="p">}</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="s2">&quot;configurable&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">config</span><span class="p">:</span>
+            <span class="n">config</span><span class="p">[</span><span class="s2">&quot;configurable&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;thread_id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">langgraph_session_id</span><span class="p">}</span>
+        <span class="k">elif</span> <span class="s2">&quot;thread_id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;configurable&quot;</span><span class="p">]:</span>
+            <span class="n">config</span><span class="p">[</span><span class="s2">&quot;configurable&quot;</span><span class="p">][</span><span class="s2">&quot;thread_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">langgraph_session_id</span>
+        
+        <span class="c1"># Invoke the graph</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="n">initial_state</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+        
+        <span class="c1"># Extract response</span>
+        <span class="n">response_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_response_content</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;messages&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        
+        <span class="c1"># Store response in conversation history</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="s2">&quot;assistant&quot;</span><span class="p">,</span> <span class="n">response_content</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">update_state</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;session_state&quot;</span><span class="p">,</span> <span class="p">{}))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_internal_session</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">response_content</span></div>
+
+    
+<div class="viewcode-block" id="RollbackAgent.arun">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent.arun">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">arun</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">RunnableConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Async version of run method.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            message: The user message to process</span>
+<span class="sd">            config: Optional LangGraph configuration</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            The agent&#39;s response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Store message in conversation history</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+        
+        <span class="c1"># Track user session if user is provided</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">user</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_session_id</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">add_session</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">external_session_id</span><span class="p">)</span>
+        
+        <span class="c1"># Build messages list with full conversation history</span>
+        <span class="n">messages</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">conversation_history</span><span class="p">:</span>
+            <span class="c1"># Convert conversation history to messages (excluding the just-added user message)</span>
+            <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">conversation_history</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>  <span class="c1"># Skip last as we just added it</span>
+                <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;role&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;user&quot;</span><span class="p">:</span>
+                    <span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">HumanMessage</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="n">msg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)))</span>
+                <span class="k">elif</span> <span class="n">msg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;role&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;assistant&quot;</span><span class="p">:</span>
+                    <span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">AIMessage</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="n">msg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)))</span>
+        
+        <span class="c1"># Add the current message</span>
+        <span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">HumanMessage</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="n">message</span><span class="p">))</span>
+        
+        <span class="c1"># Create initial state</span>
+        <span class="n">initial_state</span> <span class="o">=</span> <span class="n">AgentState</span><span class="p">(</span>
+            <span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">,</span>
+            <span class="n">session_state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">session_state</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="k">else</span> <span class="p">{},</span>
+            <span class="n">tool_invocations</span><span class="o">=</span><span class="p">[],</span>
+            <span class="n">rollback_requested</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">rollback_checkpoint_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">current_turn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">conversation_history</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;user&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="n">user_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">id</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">user</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">user_preferences</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">preferences</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">user</span> <span class="k">else</span> <span class="p">{}</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Set up config</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">config</span><span class="p">:</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">RunnableConfig</span><span class="p">(</span>
+                <span class="n">configurable</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;thread_id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">langgraph_session_id</span><span class="p">}</span>
+            <span class="p">)</span>
+        
+        <span class="c1"># Invoke the graph asynchronously</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">ainvoke</span><span class="p">(</span><span class="n">initial_state</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+        
+        <span class="c1"># Extract and store response</span>
+        <span class="n">response_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_response_content</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;messages&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="s2">&quot;assistant&quot;</span><span class="p">,</span> <span class="n">response_content</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">update_state</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;session_state&quot;</span><span class="p">,</span> <span class="p">{}))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_internal_session</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">response_content</span></div>
+
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_extract_response_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">BaseMessage</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extract content from a message.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            message: The message to extract content from</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            The extracted content as string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s1">&#39;content&#39;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">message</span><span class="o">.</span><span class="n">content</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s1">&#39;content&#39;</span> <span class="ow">in</span> <span class="n">message</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">message</span><span class="p">[</span><span class="s1">&#39;content&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_is_checkpoint_tool</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tool_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if a tool is a checkpoint management tool.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            tool_name: Name of the tool</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            True if it&#39;s a checkpoint tool, False otherwise</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">checkpoint_tool_names</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;create_checkpoint&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;list_checkpoints&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;rollback_to_checkpoint&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;delete_checkpoint&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;get_checkpoint_info&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;cleanup_auto_checkpoints&#39;</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">tool_name</span> <span class="ow">in</span> <span class="n">checkpoint_tool_names</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_auto_checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create an automatic checkpoint.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            name: Name for the checkpoint</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+            <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">Checkpoint</span><span class="o">.</span><span class="n">from_internal_session</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="p">,</span>
+                <span class="n">checkpoint_name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">is_auto</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+            
+            <span class="c1"># Store tool track position</span>
+            <span class="n">current_track</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">get_track</span><span class="p">()</span>
+            <span class="n">checkpoint</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;tool_track_position&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">current_track</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">checkpoint_count</span> <span class="o">+=</span> <span class="mi">1</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_save_internal_session</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save the current internal session to database.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session_repo</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_session_repo</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="p">)</span>
+    
+    <span class="c1"># Checkpoint management tools</span>
+<div class="viewcode-block" id="RollbackAgent.create_checkpoint_tool">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent.create_checkpoint_tool">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_checkpoint_tool</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a manual checkpoint of the current conversation state.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            name: Optional name for the checkpoint</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Confirmation message</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Checkpoint at </span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:%S&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+            <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">Checkpoint</span><span class="o">.</span><span class="n">from_internal_session</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="p">,</span>
+                <span class="n">checkpoint_name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">is_auto</span><span class="o">=</span><span class="kc">False</span>
+            <span class="p">)</span>
+            
+            <span class="c1"># Store tool track position</span>
+            <span class="n">current_track</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">get_track</span><span class="p">()</span>
+            <span class="n">checkpoint</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;tool_track_position&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">current_track</span><span class="p">)</span>
+            
+            <span class="n">saved_checkpoint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">checkpoint_count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_internal_session</span><span class="p">()</span>
+            
+            <span class="k">if</span> <span class="n">saved_checkpoint</span><span class="p">:</span>
+                <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;✓ Checkpoint &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; created successfully (ID: </span><span class="si">{</span><span class="n">saved_checkpoint</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">)&quot;</span>
+        
+        <span class="k">return</span> <span class="s2">&quot;Failed to create checkpoint. Repository or session not available.&quot;</span></div>
+
+    
+<div class="viewcode-block" id="RollbackAgent.list_checkpoints_tool">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent.list_checkpoints_tool">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_checkpoints_tool</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List all available checkpoints for the current session.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Formatted list of checkpoints</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;No active session or checkpoint functionality unavailable.&quot;</span>
+        
+        <span class="n">checkpoints</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">get_by_internal_session</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="n">auto_only</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">checkpoints</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;No checkpoints found for the current session.&quot;</span>
+        
+        <span class="n">result</span> <span class="o">=</span> <span class="s2">&quot;Available checkpoints:</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">for</span> <span class="n">cp</span> <span class="ow">in</span> <span class="n">checkpoints</span><span class="p">:</span>
+            <span class="n">checkpoint_type</span> <span class="o">=</span> <span class="s2">&quot;auto&quot;</span> <span class="k">if</span> <span class="n">cp</span><span class="o">.</span><span class="n">is_auto</span> <span class="k">else</span> <span class="s2">&quot;manual&quot;</span>
+            <span class="n">created</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">created_at</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:%S&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">cp</span><span class="o">.</span><span class="n">created_at</span> <span class="k">else</span> <span class="s2">&quot;unknown&quot;</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">checkpoint_name</span> <span class="ow">or</span> <span class="s2">&quot;Unnamed&quot;</span>
+            <span class="n">result</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">• ID: </span><span class="si">{</span><span class="n">cp</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> | Type: </span><span class="si">{</span><span class="n">checkpoint_type</span><span class="si">}</span><span class="s2"> | Created: </span><span class="si">{</span><span class="n">created</span><span class="si">}</span><span class="s2">&quot;</span>
+        
+        <span class="k">return</span> <span class="n">result</span></div>
+
+    
+<div class="viewcode-block" id="RollbackAgent.rollback_to_checkpoint_tool">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent.rollback_to_checkpoint_tool">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">rollback_to_checkpoint_tool</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checkpoint_id_or_name</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Request rollback to a specific checkpoint.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            checkpoint_id_or_name: ID or name of the checkpoint</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Status message</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;Checkpoint functionality is not available.&quot;</span>
+        
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="kc">None</span>
+        
+        <span class="c1"># Try to parse as ID or find by name</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">checkpoint_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">checkpoint_id_or_name</span><span class="p">)</span>
+            <span class="n">checkpoint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">get_by_id</span><span class="p">(</span><span class="n">checkpoint_id</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+                <span class="n">all_checkpoints</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">get_by_internal_session</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">id</span>
+                <span class="p">)</span>
+                <span class="n">checkpoint_name_lower</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">checkpoint_id_or_name</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">cp</span> <span class="ow">in</span> <span class="n">all_checkpoints</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">cp</span><span class="o">.</span><span class="n">checkpoint_name</span> <span class="ow">and</span> <span class="n">cp</span><span class="o">.</span><span class="n">checkpoint_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">checkpoint_name_lower</span><span class="p">:</span>
+                        <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">cp</span>
+                        <span class="k">break</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">checkpoint</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Checkpoint &#39;</span><span class="si">{</span><span class="n">checkpoint_id_or_name</span><span class="si">}</span><span class="s2">&#39; not found.&quot;</span>
+        
+        <span class="c1"># Mark rollback in state (would trigger actual rollback in production)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">session_state</span><span class="p">[</span><span class="s1">&#39;rollback_requested&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">session_state</span><span class="p">[</span><span class="s1">&#39;rollback_checkpoint_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">id</span>
+        
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Rollback to checkpoint </span><span class="si">{</span><span class="n">checkpoint</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> (&#39;</span><span class="si">{</span><span class="n">checkpoint</span><span class="o">.</span><span class="n">checkpoint_name</span><span class="si">}</span><span class="s2">&#39;) requested.&quot;</span></div>
+
+    
+<div class="viewcode-block" id="RollbackAgent.delete_checkpoint_tool">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent.delete_checkpoint_tool">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">delete_checkpoint_tool</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checkpoint_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete a specific checkpoint.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            checkpoint_id: ID of the checkpoint to delete</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Confirmation message</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;Checkpoint functionality is not available.&quot;</span>
+        
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">get_by_id</span><span class="p">(</span><span class="n">checkpoint_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">checkpoint</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Checkpoint </span><span class="si">{</span><span class="n">checkpoint_id</span><span class="si">}</span><span class="s2"> not found.&quot;</span>
+        
+        <span class="k">if</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">internal_session_id</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;You can only delete checkpoints from the current session.&quot;</span>
+        
+        <span class="n">success</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">checkpoint_id</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">success</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;✓ Checkpoint </span><span class="si">{</span><span class="n">checkpoint_id</span><span class="si">}</span><span class="s2"> deleted successfully.&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Failed to delete checkpoint </span><span class="si">{</span><span class="n">checkpoint_id</span><span class="si">}</span><span class="s2">.&quot;</span></div>
+
+    
+<div class="viewcode-block" id="RollbackAgent.get_checkpoint_info_tool">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent.get_checkpoint_info_tool">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_checkpoint_info_tool</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checkpoint_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get detailed information about a checkpoint.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            checkpoint_id: ID of the checkpoint</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Detailed checkpoint information</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;Checkpoint functionality is not available.&quot;</span>
+        
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">get_by_id</span><span class="p">(</span><span class="n">checkpoint_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">checkpoint</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Checkpoint </span><span class="si">{</span><span class="n">checkpoint_id</span><span class="si">}</span><span class="s2"> not found.&quot;</span>
+        
+        <span class="n">checkpoint_type</span> <span class="o">=</span> <span class="s2">&quot;Automatic&quot;</span> <span class="k">if</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">is_auto</span> <span class="k">else</span> <span class="s2">&quot;Manual&quot;</span>
+        <span class="n">created</span> <span class="o">=</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">created_at</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:%S&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">created_at</span> <span class="k">else</span> <span class="s2">&quot;unknown&quot;</span>
+        
+        <span class="n">info</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Checkpoint Details:</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">info</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;• ID: </span><span class="si">{</span><span class="n">checkpoint</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">info</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;• Name: </span><span class="si">{</span><span class="n">checkpoint</span><span class="o">.</span><span class="n">checkpoint_name</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;Unnamed&#39;</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">info</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;• Type: </span><span class="si">{</span><span class="n">checkpoint_type</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">info</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;• Created: </span><span class="si">{</span><span class="n">created</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">info</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;• Conversation Length: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">checkpoint</span><span class="o">.</span><span class="n">conversation_history</span><span class="p">)</span><span class="si">}</span><span class="s2"> messages&quot;</span>
+        
+        <span class="k">return</span> <span class="n">info</span></div>
+
+    
+<div class="viewcode-block" id="RollbackAgent.cleanup_auto_checkpoints_tool">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent.cleanup_auto_checkpoints_tool">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cleanup_auto_checkpoints_tool</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keep_latest</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Clean up old automatic checkpoints.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            keep_latest: Number of latest checkpoints to keep</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Cleanup summary</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;No active session or checkpoint functionality unavailable.&quot;</span>
+        
+        <span class="n">deleted_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">delete_auto_checkpoints</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="n">keep_latest</span><span class="o">=</span><span class="n">keep_latest</span>
+        <span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">deleted_count</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;✓ Cleaned up </span><span class="si">{</span><span class="n">deleted_count</span><span class="si">}</span><span class="s2"> old automatic checkpoints.&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;No automatic checkpoints to clean up.&quot;</span></div>
+
+    
+    <span class="c1"># Tool rollback methods</span>
+<div class="viewcode-block" id="RollbackAgent.rollback_tools">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent.rollback_tools">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">rollback_tools</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run reverse handlers for recorded tools in reverse order.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List of reverse invocation results</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">rollback</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="RollbackAgent.rollback_tools_from_track_index">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent.rollback_tools_from_track_index">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">rollback_tools_from_track_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run reverse handlers from specific track index.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            start_index: Index to start rollback from</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List of reverse invocation results</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.core.rollback_protocol</span><span class="w"> </span><span class="kn">import</span> <span class="n">CHECKPOINT_TOOL_NAMES</span><span class="p">,</span> <span class="n">ReverseInvocationResult</span>
+        
+        <span class="n">track</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">get_track</span><span class="p">()</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">track</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">start_index</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="n">track</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">tool_name</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">tool_name</span>
+            
+            <span class="k">if</span> <span class="n">tool_name</span> <span class="ow">in</span> <span class="n">CHECKPOINT_TOOL_NAMES</span><span class="p">:</span>
+                <span class="k">continue</span>
+            
+            <span class="n">spec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">get_tool</span><span class="p">(</span><span class="n">tool_name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">spec</span> <span class="ow">or</span> <span class="n">spec</span><span class="o">.</span><span class="n">reverse</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">ReverseInvocationResult</span><span class="p">(</span>
+                        <span class="n">tool_name</span><span class="o">=</span><span class="n">tool_name</span><span class="p">,</span>
+                        <span class="n">reversed_successfully</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="n">error_message</span><span class="o">=</span><span class="s2">&quot;No reverse handler registered&quot;</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+                <span class="k">continue</span>
+            
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">spec</span><span class="o">.</span><span class="n">reverse</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">args</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">result</span><span class="p">)</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">ReverseInvocationResult</span><span class="p">(</span>
+                        <span class="n">tool_name</span><span class="o">=</span><span class="n">tool_name</span><span class="p">,</span>
+                        <span class="n">reversed_successfully</span><span class="o">=</span><span class="kc">True</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">ReverseInvocationResult</span><span class="p">(</span>
+                        <span class="n">tool_name</span><span class="o">=</span><span class="n">tool_name</span><span class="p">,</span>
+                        <span class="n">reversed_successfully</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="n">error_message</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">results</span></div>
+
+    
+<div class="viewcode-block" id="RollbackAgent.redo_tools">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent.redo_tools">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">redo_tools</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Re-execute forward handlers for recorded tools.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List of new invocation records</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">redo</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="RollbackAgent.get_tool_track">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent.get_tool_track">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_tool_track</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get current recorded tool invocation track.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List of tool invocation records</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">get_track</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="RollbackAgent.get_conversation_history">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent.get_conversation_history">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_conversation_history</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get conversation history for this session.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List of conversation messages</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">conversation_history</span>
+        <span class="k">return</span> <span class="p">[]</span></div>
+
+    
+<div class="viewcode-block" id="RollbackAgent.get_session_state">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent.get_session_state">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_session_state</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get current session state.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Session state dictionary</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">session_state</span>
+        <span class="k">return</span> <span class="p">{}</span></div>
+
+    
+<div class="viewcode-block" id="RollbackAgent.from_checkpoint">
+<a class="viewcode-back" href="../../../agentgit.agents.html#agentgit.agents.rollback_agent.RollbackAgent.from_checkpoint">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_checkpoint</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">checkpoint_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">external_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">,</span>
+        <span class="n">checkpoint_repo</span><span class="p">:</span> <span class="n">CheckpointRepository</span><span class="p">,</span>
+        <span class="n">internal_session_repo</span><span class="p">:</span> <span class="n">InternalSessionRepository</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;RollbackAgent&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a new agent from a checkpoint (rollback).</span>
+<span class="sd">        </span>
+<span class="sd">        Creates a new internal session branched from the checkpoint,</span>
+<span class="sd">        preserving the forward timeline.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            checkpoint_id: ID of checkpoint to restore from</span>
+<span class="sd">            external_session_id: ID of external session</span>
+<span class="sd">            model: LangChain model to use</span>
+<span class="sd">            checkpoint_repo: Checkpoint repository</span>
+<span class="sd">            internal_session_repo: Internal session repository</span>
+<span class="sd">            **kwargs: Additional agent configuration</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            New RollbackAgent with checkpoint&#39;s state</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Load the checkpoint</span>
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">get_by_id</span><span class="p">(</span><span class="n">checkpoint_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">checkpoint</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Checkpoint </span><span class="si">{</span><span class="n">checkpoint_id</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Create new agent without session</span>
+        <span class="n">agent</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">external_session_id</span><span class="o">=</span><span class="n">external_session_id</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">internal_session_repo</span><span class="o">=</span><span class="n">internal_session_repo</span><span class="p">,</span>
+            <span class="n">checkpoint_repo</span><span class="o">=</span><span class="n">checkpoint_repo</span><span class="p">,</span>
+            <span class="n">skip_session_creation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Create new internal session as branch from the checkpoint</span>
+        <span class="n">branch_session</span> <span class="o">=</span> <span class="n">InternalSession</span><span class="o">.</span><span class="n">create_branch_from_checkpoint</span><span class="p">(</span>
+            <span class="n">checkpoint</span><span class="o">=</span><span class="n">checkpoint</span><span class="p">,</span>
+            <span class="n">external_session_id</span><span class="o">=</span><span class="n">external_session_id</span><span class="p">,</span>
+            <span class="n">parent_session_id</span><span class="o">=</span><span class="n">checkpoint</span><span class="o">.</span><span class="n">internal_session_id</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Save the branch session to database</span>
+        <span class="n">agent</span><span class="o">.</span><span class="n">internal_session</span> <span class="o">=</span> <span class="n">internal_session_repo</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">branch_session</span><span class="p">)</span>
+        <span class="n">agent</span><span class="o">.</span><span class="n">langgraph_session_id</span> <span class="o">=</span> <span class="n">agent</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">langgraph_session_id</span>
+        <span class="n">agent</span><span class="o">.</span><span class="n">_register_with_external_session</span><span class="p">()</span>
+        
+        <span class="c1"># Copy checkpoints up to rollback point for snapshot capability</span>
+        <span class="k">if</span> <span class="n">checkpoint_repo</span> <span class="ow">and</span> <span class="n">agent</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+            <span class="n">original_checkpoints</span> <span class="o">=</span> <span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">get_by_internal_session</span><span class="p">(</span>
+                <span class="n">checkpoint</span><span class="o">.</span><span class="n">internal_session_id</span><span class="p">,</span>
+                <span class="n">auto_only</span><span class="o">=</span><span class="kc">False</span>
+            <span class="p">)</span>
+            
+            <span class="k">for</span> <span class="n">cp</span> <span class="ow">in</span> <span class="n">original_checkpoints</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">cp</span><span class="o">.</span><span class="n">created_at</span> <span class="ow">and</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">created_at</span> <span class="ow">and</span> <span class="n">cp</span><span class="o">.</span><span class="n">created_at</span> <span class="o">&lt;=</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">created_at</span><span class="p">:</span>
+                    <span class="n">new_checkpoint</span> <span class="o">=</span> <span class="n">Checkpoint</span><span class="p">(</span>
+                        <span class="n">internal_session_id</span><span class="o">=</span><span class="n">agent</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                        <span class="n">checkpoint_name</span><span class="o">=</span><span class="n">cp</span><span class="o">.</span><span class="n">checkpoint_name</span><span class="p">,</span>
+                        <span class="n">session_state</span><span class="o">=</span><span class="n">cp</span><span class="o">.</span><span class="n">session_state</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                        <span class="n">conversation_history</span><span class="o">=</span><span class="n">cp</span><span class="o">.</span><span class="n">conversation_history</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                        <span class="n">is_auto</span><span class="o">=</span><span class="n">cp</span><span class="o">.</span><span class="n">is_auto</span><span class="p">,</span>
+                        <span class="n">created_at</span><span class="o">=</span><span class="n">cp</span><span class="o">.</span><span class="n">created_at</span><span class="p">,</span>
+                        <span class="n">metadata</span><span class="o">=</span><span class="n">cp</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                    <span class="p">)</span>
+                    <span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">new_checkpoint</span><span class="p">)</span>
+        
+        <span class="c1"># Restore tool track position if available</span>
+        <span class="k">if</span> <span class="s2">&quot;tool_track_position&quot;</span> <span class="ow">in</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">metadata</span><span class="p">:</span>
+            <span class="n">track_position</span> <span class="o">=</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;tool_track_position&quot;</span><span class="p">]</span>
+            <span class="c1"># Truncate tool track to checkpoint position</span>
+            <span class="n">agent</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">truncate_track</span><span class="p">(</span><span class="n">track_position</span><span class="p">)</span>
+        
+        <span class="n">agent</span><span class="o">.</span><span class="n">_save_internal_session</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">agent</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Li Yang, Wang Siyuan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

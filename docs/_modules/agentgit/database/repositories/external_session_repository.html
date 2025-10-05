@@ -1,0 +1,612 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>agentgit.database.repositories.external_session_repository &mdash; Agent Git 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            Agent Git
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">agentgit</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">Agent Git</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">agentgit.database.repositories.external_session_repository</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for agentgit.database.repositories.external_session_repository</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Repository for external session database operations.</span>
+
+<span class="sd">Handles CRUD operations for external sessions in the LangGraph rollback agent system.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.sessions.external_session</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExternalSession</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.database.db_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_database_path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.database.db_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_database_path</span>
+
+
+
+<div class="viewcode-block" id="ExternalSessionRepository">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.external_session_repository.ExternalSessionRepository">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ExternalSessionRepository</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Repository for ExternalSession CRUD operations with SQLite.</span>
+<span class="sd">    </span>
+<span class="sd">    Manages external sessions which are the user-visible conversation containers.</span>
+<span class="sd">    Each external session can contain multiple internal sessions with branching support.</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        db_path: Path to the SQLite database file.</span>
+<span class="sd">    </span>
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; repo = ExternalSessionRepository()</span>
+<span class="sd">        &gt;&gt;&gt; session = ExternalSession(user_id=1, session_name=&quot;My Chat&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; saved_session = repo.create(session)</span>
+<span class="sd">        &gt;&gt;&gt; sessions = repo.get_user_sessions(user_id=1)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the external session repository.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            db_path: Path to SQLite database. If None, uses configured default.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">db_path</span> <span class="o">=</span> <span class="n">db_path</span> <span class="ow">or</span> <span class="n">get_database_path</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_db</span><span class="p">()</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_init_db</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the external sessions table if it doesn&#39;t exist.&quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                CREATE TABLE IF NOT EXISTS external_sessions (</span>
+<span class="s2">                    id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="s2">                    user_id INTEGER NOT NULL,</span>
+<span class="s2">                    session_name TEXT NOT NULL,</span>
+<span class="s2">                    created_at TEXT NOT NULL,</span>
+<span class="s2">                    updated_at TEXT,</span>
+<span class="s2">                    is_active INTEGER DEFAULT 1,</span>
+<span class="s2">                    data TEXT,</span>
+<span class="s2">                    metadata TEXT,</span>
+<span class="s2">                    branch_count INTEGER DEFAULT 0,</span>
+<span class="s2">                    total_checkpoints INTEGER DEFAULT 0,</span>
+<span class="s2">                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE</span>
+<span class="s2">                )</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
+            
+            <span class="c1"># Check for migration needs</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA table_info(external_sessions)&quot;</span><span class="p">)</span>
+            <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">column</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
+            
+            <span class="c1"># Add new columns if they don&#39;t exist</span>
+            <span class="k">if</span> <span class="s1">&#39;metadata&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;ALTER TABLE external_sessions ADD COLUMN metadata TEXT&quot;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="s1">&#39;branch_count&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;ALTER TABLE external_sessions ADD COLUMN branch_count INTEGER DEFAULT 0&quot;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="s1">&#39;total_checkpoints&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;ALTER TABLE external_sessions ADD COLUMN total_checkpoints INTEGER DEFAULT 0&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                CREATE INDEX IF NOT EXISTS idx_external_sessions_user </span>
+<span class="s2">                ON external_sessions(user_id)</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                CREATE INDEX IF NOT EXISTS idx_external_sessions_active </span>
+<span class="s2">                ON external_sessions(user_id, is_active)</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
+            
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    
+<div class="viewcode-block" id="ExternalSessionRepository.create">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.create">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session</span><span class="p">:</span> <span class="n">ExternalSession</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ExternalSession</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a new external session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            session: ExternalSession object to create.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            The created session with id populated.</span>
+<span class="sd">            </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            sqlite3.IntegrityError: If user_id doesn&#39;t exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">session</span><span class="o">.</span><span class="n">created_at</span><span class="p">:</span>
+            <span class="n">session</span><span class="o">.</span><span class="n">created_at</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+        
+        <span class="n">session_dict</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+        <span class="n">json_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">session_dict</span><span class="p">)</span>
+        
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                INSERT INTO external_sessions </span>
+<span class="s2">                (user_id, session_name, created_at, updated_at, is_active, data, </span>
+<span class="s2">                 metadata, branch_count, total_checkpoints)</span>
+<span class="s2">                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">user_id</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">session_name</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">created_at</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">updated_at</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span> <span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">updated_at</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="mi">1</span> <span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">is_active</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="n">json_data</span><span class="p">,</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span> <span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">metadata</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">branch_count</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">total_checkpoints</span>
+            <span class="p">))</span>
+            
+            <span class="n">session</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">lastrowid</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">session</span></div>
+
+    
+<div class="viewcode-block" id="ExternalSessionRepository.update">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.update">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session</span><span class="p">:</span> <span class="n">ExternalSession</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update an existing external session.</span>
+<span class="sd">        </span>
+<span class="sd">        Updates all session data including internal session IDs and current session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            session: ExternalSession object with updated data.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            True if update successful, False if session not found.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">session</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        
+        <span class="n">session</span><span class="o">.</span><span class="n">updated_at</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+        <span class="n">session_dict</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+        <span class="n">json_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">session_dict</span><span class="p">)</span>
+        
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                UPDATE external_sessions </span>
+<span class="s2">                SET session_name = ?, updated_at = ?, is_active = ?, data = ?,</span>
+<span class="s2">                    metadata = ?, branch_count = ?, total_checkpoints = ?</span>
+<span class="s2">                WHERE id = ?</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">session_name</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">updated_at</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+                <span class="mi">1</span> <span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">is_active</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="n">json_data</span><span class="p">,</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span> <span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">metadata</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">branch_count</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">total_checkpoints</span><span class="p">,</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">id</span>
+            <span class="p">))</span>
+            
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">cursor</span><span class="o">.</span><span class="n">rowcount</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="ExternalSessionRepository.get_by_id">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.get_by_id">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ExternalSession</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get an external session by ID.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            session_id: The ID of the session to retrieve.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            ExternalSession if found, None otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                SELECT id, user_id, session_name, created_at, updated_at, </span>
+<span class="s2">                       is_active, data, metadata, branch_count, total_checkpoints</span>
+<span class="s2">                FROM external_sessions</span>
+<span class="s2">                WHERE id = ?</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">session_id</span><span class="p">,))</span>
+            
+            <span class="n">row</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">row</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_row_to_session</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+    
+<div class="viewcode-block" id="ExternalSessionRepository.get_user_sessions">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.get_user_sessions">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_user_sessions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">active_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">ExternalSession</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all sessions for a user.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            user_id: The ID of the user.</span>
+<span class="sd">            active_only: If True, only return active sessions.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List of ExternalSession objects, ordered by created_at descending.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">active_only</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                    SELECT id, user_id, session_name, created_at, updated_at, </span>
+<span class="s2">                           is_active, data, metadata, branch_count, total_checkpoints</span>
+<span class="s2">                    FROM external_sessions</span>
+<span class="s2">                    WHERE user_id = ? AND is_active = 1</span>
+<span class="s2">                    ORDER BY created_at DESC</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">user_id</span><span class="p">,))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                    SELECT id, user_id, session_name, created_at, updated_at, </span>
+<span class="s2">                           is_active, data, metadata, branch_count, total_checkpoints</span>
+<span class="s2">                    FROM external_sessions</span>
+<span class="s2">                    WHERE user_id = ?</span>
+<span class="s2">                    ORDER BY created_at DESC</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">user_id</span><span class="p">,))</span>
+            
+            <span class="n">rows</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_row_to_session</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="ExternalSessionRepository.get_by_internal_session">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.get_by_internal_session">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_by_internal_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">langgraph_session_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ExternalSession</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Find the external session containing a specific internal langgraph session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            langgraph_session_id: The langgraph session ID to search for.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            ExternalSession containing the internal session, None if not found.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                SELECT id, user_id, session_name, created_at, updated_at, </span>
+<span class="s2">                       is_active, data, metadata, branch_count, total_checkpoints</span>
+<span class="s2">                FROM external_sessions</span>
+<span class="s2">                WHERE data LIKE ?</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="sa">f</span><span class="s1">&#39;%&quot;</span><span class="si">{</span><span class="n">langgraph_session_id</span><span class="si">}</span><span class="s1">&quot;%&#39;</span><span class="p">,))</span>
+            
+            <span class="n">rows</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+                <span class="n">session</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_row_to_session</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">langgraph_session_id</span> <span class="ow">in</span> <span class="n">session</span><span class="o">.</span><span class="n">internal_session_ids</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">session</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+    
+<div class="viewcode-block" id="ExternalSessionRepository.add_internal_session">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.add_internal_session">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_internal_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">external_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">langgraph_session_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add an internal langgraph session to an external session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            external_session_id: The ID of the external session.</span>
+<span class="sd">            langgraph_session_id: The langgraph session ID to add.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            True if successful, False if external session not found.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">session</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_by_id</span><span class="p">(</span><span class="n">external_session_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        
+        <span class="n">session</span><span class="o">.</span><span class="n">add_internal_session</span><span class="p">(</span><span class="n">langgraph_session_id</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">session</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="ExternalSessionRepository.set_current_internal_session">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.set_current_internal_session">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_current_internal_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">external_session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">langgraph_session_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the current internal session for an external session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            external_session_id: The ID of the external session.</span>
+<span class="sd">            langgraph_session_id: The langgraph session ID to set as current.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            True if successful, False if session not found or langgraph_session_id not in list.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">session</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_by_id</span><span class="p">(</span><span class="n">external_session_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        
+        <span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">set_current_internal_session</span><span class="p">(</span><span class="n">langgraph_session_id</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">session</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+    
+<div class="viewcode-block" id="ExternalSessionRepository.deactivate">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.deactivate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">deactivate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Deactivate an external session (soft delete).</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            session_id: The ID of the session to deactivate.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            True if deactivation successful, False otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Get the session first to update its data</span>
+        <span class="n">session</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_by_id</span><span class="p">(</span><span class="n">session_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        
+        <span class="c1"># Update the session object</span>
+        <span class="n">session</span><span class="o">.</span><span class="n">is_active</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">session</span><span class="o">.</span><span class="n">updated_at</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+        
+        <span class="c1"># Update both the column and the JSON data</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">session</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="ExternalSessionRepository.delete">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.delete">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Permanently delete an external session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            session_id: The ID of the session to delete.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            True if deletion successful, False otherwise.</span>
+<span class="sd">            </span>
+<span class="sd">        Note:</span>
+<span class="sd">            This will cascade delete all internal sessions and checkpoints</span>
+<span class="sd">            associated with this external session.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                DELETE FROM external_sessions WHERE id = ?</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">session_id</span><span class="p">,))</span>
+            
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">cursor</span><span class="o">.</span><span class="n">rowcount</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="ExternalSessionRepository.check_ownership">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.check_ownership">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_ownership</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if a user owns a specific session.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            session_id: The ID of the session.</span>
+<span class="sd">            user_id: The ID of the user.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            True if the user owns the session, False otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                SELECT COUNT(*) FROM external_sessions</span>
+<span class="s2">                WHERE id = ? AND user_id = ?</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">session_id</span><span class="p">,</span> <span class="n">user_id</span><span class="p">))</span>
+            
+            <span class="n">count</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="ExternalSessionRepository.count_user_sessions">
+<a class="viewcode-back" href="../../../../agentgit.database.repositories.html#agentgit.database.repositories.external_session_repository.ExternalSessionRepository.count_user_sessions">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">count_user_sessions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">active_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Count the number of sessions a user has.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            user_id: The ID of the user.</span>
+<span class="sd">            active_only: If True, only count active sessions.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            The number of sessions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="c1"># Enable foreign key constraints</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON&quot;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">active_only</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                    SELECT COUNT(*) FROM external_sessions</span>
+<span class="s2">                    WHERE user_id = ? AND is_active = 1</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">user_id</span><span class="p">,))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                    SELECT COUNT(*) FROM external_sessions</span>
+<span class="s2">                    WHERE user_id = ?</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">user_id</span><span class="p">,))</span>
+            
+            <span class="k">return</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_row_to_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ExternalSession</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert a database row to an ExternalSession object.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            row: Tuple containing database fields.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            ExternalSession object with all fields including internal session tracking.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Handle both old and new row formats</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">==</span> <span class="mi">7</span><span class="p">:</span>
+            <span class="c1"># Old format without new columns</span>
+            <span class="n">session_id</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">session_name</span><span class="p">,</span> <span class="n">created_at</span><span class="p">,</span> <span class="n">updated_at</span><span class="p">,</span> <span class="n">is_active</span><span class="p">,</span> <span class="n">json_data</span> <span class="o">=</span> <span class="n">row</span>
+            <span class="n">metadata</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">branch_count</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">total_checkpoints</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># New format with all columns</span>
+            <span class="n">session_id</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">session_name</span><span class="p">,</span> <span class="n">created_at</span><span class="p">,</span> <span class="n">updated_at</span><span class="p">,</span> <span class="n">is_active</span><span class="p">,</span> <span class="n">json_data</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">branch_count</span><span class="p">,</span> <span class="n">total_checkpoints</span> <span class="o">=</span> <span class="n">row</span>
+        
+        <span class="k">if</span> <span class="n">json_data</span><span class="p">:</span>
+            <span class="n">session_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json_data</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Fallback for older records without JSON data</span>
+            <span class="n">session_dict</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">session_id</span><span class="p">,</span>
+                <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">user_id</span><span class="p">,</span>
+                <span class="s2">&quot;session_name&quot;</span><span class="p">:</span> <span class="n">session_name</span><span class="p">,</span>
+                <span class="s2">&quot;created_at&quot;</span><span class="p">:</span> <span class="n">created_at</span><span class="p">,</span>
+                <span class="s2">&quot;updated_at&quot;</span><span class="p">:</span> <span class="n">updated_at</span><span class="p">,</span>
+                <span class="s2">&quot;is_active&quot;</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span><span class="n">is_active</span><span class="p">),</span>
+                <span class="s2">&quot;internal_session_ids&quot;</span><span class="p">:</span> <span class="p">[],</span>
+                <span class="s2">&quot;current_internal_session_id&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;branch_count&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="s2">&quot;total_checkpoints&quot;</span><span class="p">:</span> <span class="mi">0</span>
+            <span class="p">}</span>
+        
+        <span class="c1"># Override with actual database values for new fields</span>
+        <span class="k">if</span> <span class="n">metadata</span><span class="p">:</span>
+            <span class="n">session_dict</span><span class="p">[</span><span class="s2">&quot;metadata&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span>
+        <span class="n">session_dict</span><span class="p">[</span><span class="s2">&quot;branch_count&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">branch_count</span> <span class="ow">or</span> <span class="mi">0</span>
+        <span class="n">session_dict</span><span class="p">[</span><span class="s2">&quot;total_checkpoints&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_checkpoints</span> <span class="ow">or</span> <span class="mi">0</span>
+        
+        <span class="n">session</span> <span class="o">=</span> <span class="n">ExternalSession</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">session_dict</span><span class="p">)</span>
+        <span class="n">session</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">session_id</span>  <span class="c1"># Ensure ID is set</span>
+        
+        <span class="k">return</span> <span class="n">session</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Li Yang, Wang Siyuan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
