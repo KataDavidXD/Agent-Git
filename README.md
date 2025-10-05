@@ -4,9 +4,8 @@
 <img width="786" height="318" alt="Agent Git" src="https://github.com/user-attachments/assets/a22537bf-f800-46a0-b49f-35ef1cc55cff" />
 
 [![Docs](https://img.shields.io/badge/docs-latest-blue?logo=readthedocs&logoColor=auto)](https://katadavidxd.github.io/Agent-Git/)
-[![GitHub stars](https://img.shields.io/github/stars/KataDavidXD/Agent-Git?logo=github&logoColor=auto)](https://github.com/KataDavidXD/Agent-Git/stargazers)
-[![License](https://img.shields.io/github/license/KataDavidXD/Agent-Git?logoColor=auto)](https://github.com/KataDavidXD/Agent-Git/blob/main/LICENSE)
-
+[![GitHub stars](https://img.shields.io/github/stars/katadavidxd/agent-git?logo=github&logoColor=auto)](https://github.com/KataDavidXD/Agent-Git/stargazers)
+[![License](https://img.shields.io/github/license/katadavidxd/agent-git?logoColor=auto)](https://github.com/KataDavidXD/Agent-Git/blob/main/LICENSE)
 
 [![Reddit](https://img.shields.io/badge/Reddit-FF4500?logo=reddit&logoColor=auto)](https://reddit.com/r/your-subreddit)
 [![X](https://img.shields.io/badge/X-000000?logo=x&logoColor=auto)](https://x.com/your-handle)
