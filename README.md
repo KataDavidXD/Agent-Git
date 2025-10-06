@@ -16,13 +16,16 @@
 <h1 align="center">Agent Git: Agent Version Control, Open-Branching, and Reinforcement Learning MDP for Agentic AI</h1>
 
 <p align="center">
-  <a href="https://katadavidxd.github.io/Agent-Git/"> Documentation </a>
-  <a href="https://github.com/KataDavidXD/Agent-Git/blob/main/Agent_Git.pdf"> White Paper</a>    
-  <a href="https://camo.hku.hk/research-labs/research-labs-lab-for-ai-agents-in-business-and-economics/"> Our Lab</a>    
+  <a href="https://katadavidxd.github.io/Agent-Git/">📖 <b>Documentation </b></a>
+  &nbsp;&nbsp;•&nbsp;&nbsp;
+  <a href="https://github.com/KataDavidXD/Agent-Git/blob/main/Agent_Git.pdf">🧾 <b>White Paper</b></a>
+  &nbsp;&nbsp;•&nbsp;&nbsp;
+  <a href="https://camo.hku.hk/research-labs/research-labs-lab-for-ai-agents-in-business-and-economics/">🏛️ <b>Our Lab</b></a>
 </p>
 
+##
 
-Agent Git is the first self-contained package that extends the standard Agentic framework, such as
+**Agent Git** is the first self-contained package that extends the standard Agentic framework, such as
 LangGraph and Agno by introducing Git-like version control for AI conversations. By enabling operators
 such as State Commit, State Revert, and Branching, Agent Git provides durable and reproducible
 checkpoints, allowing users to reverse actions and travel to previous states on a Markov Chain of
