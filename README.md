@@ -1,7 +1,37 @@
 
+<p align="center">
+  <picture>
+    <!-- Dark theme -->
+    <source 
+      media="(prefers-color-scheme: dark)" 
+      srcset="https://github.com/user-attachments/assets/a22537bf-f800-46a0-b49f-35ef1cc55cff" />
+    <!-- Light theme -->
+    <source 
+      media="(prefers-color-scheme: light)" 
+      srcset="https://github.com/user-attachments/assets/34f95487-325d-4777-bf65-ceac5a160cb4" />
+    <!-- Fallback -->
+    <img
+      alt="Agent Git"
+      src="https://github.com/user-attachments/assets/a22537bf-f800-46a0-b49f-35ef1cc55cff"
+      style="
+        display: block;
+        margin: auto;
+        max-width: 90%;
+        height: auto;
+        border-radius: 10px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: box-shadow 0.3s ease-in-out;
+      "
+      onmouseover="this.style.boxShadow='0 0 25px rgba(100, 180, 255, 0.5)'"
+      onmouseout="this.style.boxShadow='0 0 15px rgba(0, 0, 0, 0.15)'"
+    />
+  </picture>
+</p>
+
+
 <div align="center">
 
-<img width="786" height="318" alt="Agent Git" src="https://github.com/user-attachments/assets/a22537bf-f800-46a0-b49f-35ef1cc55cff" />
 
 [![Docs](https://img.shields.io/badge/docs-latest-blue?logo=readthedocs&logoColor=auto)](https://katadavidxd.github.io/Agent-Git/)
 [![GitHub stars](https://img.shields.io/github/stars/katadavidxd/agent-git?logo=github&logoColor=auto)](https://github.com/KataDavidXD/Agent-Git/stargazers)
