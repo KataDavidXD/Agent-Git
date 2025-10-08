@@ -647,6 +647,16 @@ Agent Git is released under the Apache 2.0 License, ensuring compatibility with 
 - GitHub Issues: Report bugs or request features
 - Documentation: See `whitePaper.pdf`
 
+## Community & Discussion
+
+**Discord**
+https://discord.gg/rTHHWdAk
+
+
+**WeChat**
+![image](https://github.com/user-attachments/assets/56a8d5ec-64a7-45a9-bc9d-2a1d4373fd95)
+
+
 ---
 
 Built for the LangChain/LangGraph community
