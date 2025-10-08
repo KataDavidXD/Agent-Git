@@ -38,8 +38,8 @@
 [![License](https://img.shields.io/github/license/katadavidxd/agent-git?logoColor=auto)](https://github.com/KataDavidXD/Agent-Git/blob/main/LICENSE)
 [![Pre-release Wheel](https://img.shields.io/badge/Download-Pre--release-blue?logo=python&logoColor=white)](https://github.com/KataDavidXD/Agent-Git/releases/tag/V0.1.0-alpha)
 
-[![Reddit](https://img.shields.io/badge/Reddit-FF4500?logo=reddit&logoColor=auto)](https://reddit.com/r/AgentGit)
-[![Discord](https://img.shields.io/badge/Join%20Us%20on%20Discord-5865F2?logo=discord&logoColor=auto)](https://discord.gg/C82Z9C6P)
+[![WeChat](https://img.shields.io/badge/WeChat-AgentGit-green?logo=wechat&logoColor=white)](https://github.com/user-attachments/assets/e0759fe0-45a9-40b1-9c5c-a9869aee5b63)
+[![Discord](https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=auto)](https://discord.gg/C82Z9C6P)
 
 </div>
 
