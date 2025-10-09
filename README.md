@@ -29,9 +29,10 @@
   </picture>
 </p>
 
+<h1 align="center">Agent Git: Agent Version Control, Open-Branching, and Reinforcement Learning MDP for Agentic AI</h1>
+
 
 <div align="center">
-
 
 [![Docs](https://img.shields.io/badge/docs-latest-blue?logo=readthedocs&logoColor=auto)](https://katadavidxd.github.io/Agent-Git/)
 [![GitHub stars](https://img.shields.io/github/stars/katadavidxd/agent-git?logo=github&logoColor=auto)](https://github.com/KataDavidXD/Agent-Git/stargazers)
@@ -44,7 +45,6 @@
 
 </div>
 
-<h1 align="center">Agent Git: Agent Version Control, Open-Branching, and Reinforcement Learning MDP for Agentic AI</h1>
 
 <p align="center">
   <a href="https://katadavidxd.github.io/Agent-Git/">📖 <b>Documentation </b></a>
