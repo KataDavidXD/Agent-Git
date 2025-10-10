@@ -103,7 +103,12 @@ You can download the **pre-release version** of Agent Git as a Python wheel from
 
 ## Quick Start Video: Download & Prepare to Use
 
-[![Watch the video](https://img.youtube.com/vi/1bTJ0RTdjzU/maxresdefault.jpg)](https://youtu.be/1bTJ0RTdjzU?si=vXsCibB5C8gTmu29)
+<p align="center">
+  <a href="https://youtu.be/1bTJ0RTdjzU?si=vXsCibB5C8gTmu29" target="_blank">
+    <img width="1163" height="814" alt="Agent-Git Demo Video" src="https://github.com/user-attachments/assets/09f6d4cf-578a-4784-a53b-c7d18bef0005" />
+  </a>
+</p>
+
 
 
 ### Using uv (Recommended)
