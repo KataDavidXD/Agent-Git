@@ -3,7 +3,7 @@
 Handles agent creation, rollback operations, and session management.
 """
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, Callable
 from datetime import datetime
 import os
 from langchain_openai import ChatOpenAI
@@ -118,17 +118,21 @@ class AgentService:
         external_session_id: int,
         internal_session_id: Optional[int] = None,
         base_url: Optional[str] = None,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        tools: Optional[List] = None,
+        reverse_tools: Optional[Dict[str, Callable]] = None
     ) -> Optional[RollbackAgent]:
         """Resume an existing agent session.
-        
+
         Args:
             external_session_id: ID of the external session.
             internal_session_id: Optional specific internal session to resume.
                                If None, uses the current internal session.
             base_url: Optional base URL for the model provider (overrides defaults/env if provided).
             api_key: Optional API key for the model provider (overrides defaults/env if provided).
-            
+            tools: Optional list of tools to register with the agent.
+            reverse_tools: Optional mapping of tool names to reverse handlers.
+
         Returns:
             The resumed RollbackAgent instance, or None if not found.
         """
@@ -169,6 +173,8 @@ class AgentService:
             checkpoint_repo=self.checkpoint_repo,
             session_state=internal_session.session_state,
             skip_session_creation=True,  # Don't create a new session, we're resuming
+            tools=tools,
+            reverse_tools=reverse_tools,
             add_history_to_messages=True,
             num_history_runs=5,
             show_tool_calls=True
@@ -184,6 +190,20 @@ class AgentService:
             agent._restored_from_checkpoint = True
             agent._restored_history = internal_session.conversation_history.copy()
         
+        # Restore tool track from latest checkpoint
+        latest_checkpoint = self.checkpoint_repo.get_latest_checkpoint(internal_session.id)
+        if latest_checkpoint and latest_checkpoint.tool_invocations:
+            from agentgit.core.rollback_protocol import ToolInvocationRecord
+            for inv in latest_checkpoint.tool_invocations:
+                record = ToolInvocationRecord(
+                    tool_name=inv.get("tool_name"),
+                    args=inv.get("args", {}),
+                    result=inv.get("result"),
+                    success=inv.get("success", True),
+                    error_message=inv.get("error_message")
+                )
+                agent.tool_rollback_registry._track.append(record)
+        
         self.current_agent = agent
         return agent
     
@@ -193,17 +213,21 @@ class AgentService:
         checkpoint_id: int,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
-        rollback_tools: bool = True
+        rollback_tools: bool = True,
+        tools: Optional[List] = None,
+        reverse_tools: Optional[Dict[str, Callable]] = None
     ) -> Optional[RollbackAgent]:
         """Create a new agent from a checkpoint (rollback operation).
-        
+
         Args:
             external_session_id: ID of the external session.
             checkpoint_id: ID of the checkpoint to rollback to.
             base_url: Optional base URL for the model provider (overrides defaults/env if provided).
             api_key: Optional API key for the model provider (overrides defaults/env if provided).
             rollback_tools: Whether to rollback tool operations after the checkpoint.
-            
+            tools: Optional list of tools to register with the agent.
+            reverse_tools: Optional mapping of tool names to reverse handlers.
+
         Returns:
             A new RollbackAgent with the checkpoint's state, or None if failed.
         """
@@ -240,6 +264,8 @@ class AgentService:
                 model=model,
                 checkpoint_repo=self.checkpoint_repo,
                 internal_session_repo=self.internal_session_repo,
+                tools=tools,
+                reverse_tools=reverse_tools,
                 add_history_to_messages=True,
                 num_history_runs=5,
                 show_tool_calls=True

@@ -19,15 +19,15 @@ from enum import Enum
 # Add the parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.auth.auth_service import AuthService
-from src.auth.user import User
-from src.agents.agent_service import AgentService
-from src.agents.rollback_agent import RollbackAgent
-from src.sessions.external_session import ExternalSession
-from src.database.repositories.external_session_repository import ExternalSessionRepository
-from src.database.repositories.internal_session_repository import InternalSessionRepository
-from src.database.repositories.checkpoint_repository import CheckpointRepository
-from src.database.db_config import get_database_path
+from agentgit.auth.auth_service import AuthService
+from agentgit.auth.user import User
+from agentgit.agents.agent_service import AgentService
+from agentgit.agents.rollback_agent import RollbackAgent
+from agentgit.sessions.external_session import ExternalSession
+from agentgit.database.repositories.external_session_repository import ExternalSessionRepository
+from agentgit.database.repositories.internal_session_repository import InternalSessionRepository
+from agentgit.database.repositories.checkpoint_repository import CheckpointRepository
+from agentgit.database.db_config import get_database_path
 
 
 class Color:
@@ -70,7 +70,7 @@ class MenuChoice(Enum):
 
 class CLIChatApp:
     """Main CLI application for the chat system."""
-    
+
     def __init__(self):
         """Initialize the CLI chat application."""
         # The repositories handle their own table initialization
@@ -79,11 +79,11 @@ class CLIChatApp:
         self.external_session_repo = ExternalSessionRepository()
         self.internal_session_repo = InternalSessionRepository()
         self.checkpoint_repo = CheckpointRepository()
-        
+
         self.current_user: Optional[User] = None
         self.current_external_session: Optional[ExternalSession] = None
         self.current_agent: Optional[RollbackAgent] = None
-        
+
         # Ensure database path exists
         self._ensure_database_path()
     

@@ -222,44 +222,46 @@ from agentgit.database.repositories.external_session_repository import ExternalS
 from agentgit.database.repositories.checkpoint_repository import CheckpointRepository
 from agentgit.database.repositories.internal_session_repository import InternalSessionRepository
 from agentgit.database.repositories.user_repository import UserRepository
+from agentgit.auth.user import User
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from datetime import datetime
 
-# Setup repositories
-user_repo = UserRepository()
+# Step 1: Create or get a user
+user_repo = UserRepository()  # Auto-creates 'rootusr' with ID=1
+user = user_repo.find_by_username("rootusr")
+
+# Step 2: Setup repositories
 external_repo = ExternalSessionRepository()
 checkpoint_repo = CheckpointRepository()
 internal_repo = InternalSessionRepository()
 
-# Get user and create session
-user = user_repo.find_by_username("rootusr")
-session = external_repo.create(ExternalSession(
+external_session = external_repo.create(ExternalSession(
     user_id=user.id,
-    session_name="Manual Agent",
+    session_name="Rollback Demo",
     created_at=datetime.now()
 ))
 
-# Define tool with side effects
-order_db = {}
+# Define a tool with side effects
+order_database = {}  # Simulated database
 
 @tool
 def create_order(order_id: str, amount: float) -> str:
-    """Create an order."""
-    order_db[order_id] = {"amount": amount}
+    """Create a new order in the database."""
+    order_database[order_id] = {"amount": amount, "status": "created"}
     return f"Order {order_id} created for ${amount}"
 
 def reverse_create_order(args, result):
-    """Undo order creation."""
+    """Reverse order creation by deleting it."""
     order_id = args['order_id']
-    if order_id in order_db:
-        del order_db[order_id]
+    if order_id in order_database:
+        del order_database[order_id]
     return f"Order {order_id} deleted"
 
-# Create agent
+# Create agent with rollback capability
 agent = RollbackAgent(
-    external_session_id=session.id,
-    model=ChatOpenAI(model="gpt-4o-mini", temperature=0.7),
+    external_session_id=external_session.id,
+    model=ChatOpenAI(model="gpt-4o-mini"),
     tools=[create_order],
     reverse_tools={"create_order": reverse_create_order},
     auto_checkpoint=True,
@@ -267,20 +269,38 @@ agent = RollbackAgent(
     internal_session_repo=internal_repo
 )
 
-# Use the agent
-agent.run("Create order #1001 for $250")
+# Conversation flow
+print("=== Original Timeline ===")
+agent.run("Hello! I need to create some orders.")
 
-# Create checkpoint
-checkpoint_msg = agent.create_checkpoint_tool("Before changes")
-checkpoint_id = int(checkpoint_msg.split("ID: ")[1].split(")")[0])
+# Create manual checkpoint before operations
+checkpoint_msg = agent.create_checkpoint_tool("Before order creation")
+print(checkpoint_msg)
+# Extract checkpoint ID from message: "✓ Checkpoint 'Before order creation' created successfully (ID: 1)"
+safe_checkpoint_id = int(checkpoint_msg.split("ID: ")[1].rstrip(")")) # In practice, parse this from checkpoint_msg
 
-# Continue conversation
-agent.run("Create order #1002 for $150")
+# Create some orders (auto-checkpoints created after each)
+agent.run("Please create order #1001 for $250")
+print(f"Database state: {order_database}")
 
-# Rollback - creates new branch!
+agent.run("Now create order #1002 for $150")
+print(f"Database state: {order_database}")
+
+agent.run("Create one more order #1003 for $300")
+print(f"Database state: {order_database}")
+# Database now has: {1001: ..., 1002: ..., 1003: ...}
+
+# Get conversation history length
+original_history = agent.get_conversation_history()
+print(f"Original history length: {len(original_history)} messages")
+
+# Oops! We need to go back to before the orders were created
+print("\n=== Performing Rollback ===")
+
+# Rollback to the safe checkpoint - creates a new branch
 branched_agent = RollbackAgent.from_checkpoint(
-    checkpoint_id=checkpoint_id,
-    external_session_id=session.id,
+    checkpoint_id=safe_checkpoint_id,
+    external_session_id=external_session.id,
     model=ChatOpenAI(model="gpt-4o-mini"),
     tools=[create_order],
     reverse_tools={"create_order": reverse_create_order},
@@ -288,13 +308,61 @@ branched_agent = RollbackAgent.from_checkpoint(
     internal_session_repo=internal_repo
 )
 
-# Reverse tools
-checkpoint = checkpoint_repo.get_by_id(checkpoint_id)
+# Check the branched agent's state
+branched_history = branched_agent.get_conversation_history()
+print(f"Branched history length: {len(branched_history)} messages")
+print(f"Database state after branch: {order_database}")
+
+# The branch has the state from before the checkpoint
+# But the tool operations haven't been reversed yet
+# To reverse tools, get the checkpoint and rollback from its track position
+checkpoint = checkpoint_repo.get_by_id(safe_checkpoint_id)
 if "tool_track_position" in checkpoint.metadata:
-    track_pos = checkpoint.metadata["tool_track_position"]
-    results = branched_agent.rollback_tools_from_track_index(track_pos)
-    for r in results:
-        print(f"Reversed {r.tool_name}: {r.reversed_successfully}")
+    track_position = checkpoint.metadata["tool_track_position"]
+    reverse_results = agent.rollback_tools_from_track_index(track_position)
+
+    print("\nTool Reversal Results:")
+    for result in reverse_results:
+        if result.reversed_successfully:
+            print(f"✓ Reversed {result.tool_name}")
+        else:
+            print(f"✗ Failed to reverse {result.tool_name}: {result.error_message}")
+
+print(f"Database after tool reversal: {order_database}")
+
+# Continue with different actions on the branch
+print("\n=== New Branch Timeline ===")
+branched_agent.run("Let's create just one order instead: #2001 for $500")
+print(f"Database state: {order_database}")
+
+# Original agent can still continue independently
+print("\n=== Original Timeline Continues ===")
+agent.run("Create another order #1004 for $200")
+
+# Show conversation histories to prove independence
+print("\n=== Timeline Independence Verification ===")
+original_conv = agent.get_conversation_history()
+branched_conv = branched_agent.get_conversation_history()
+
+print(f"\nOriginal timeline - conversation history ({len(original_conv)} messages):")
+for i, msg in enumerate(original_conv[-4:], start=len(original_conv)-3):  # Show last 4 messages
+    role = msg.get('role', 'unknown')
+    content = msg.get('content', '')[:80]  # Truncate long messages
+    print(f"  [{i}] {role}: {content}...")
+
+print(f"\nBranched timeline - conversation history ({len(branched_conv)} messages):")
+for i, msg in enumerate(branched_conv, start=1):
+    role = msg.get('role', 'unknown')
+    content = msg.get('content', '')[:80]
+    print(f"  [{i}] {role}: {content}...")
+
+# Verify both sessions exist
+all_sessions = internal_repo.get_by_external_session(external_session.id)
+print(f"\nTotal internal sessions (branches): {len(all_sessions)}")
+print(f"Original session ID: {agent.internal_session.id}")
+print(f"Branched session ID: {branched_agent.internal_session.id}")
+print(f"Branch parent: {branched_agent.internal_session.parent_session_id}")
+print(f"Is branch: {branched_agent.internal_session.is_branch()}")
 ```
 
 ### Option 2: AgentService (Recommended)
@@ -309,69 +377,93 @@ from agentgit.database.repositories.user_repository import UserRepository
 from langchain_core.tools import tool
 from datetime import datetime
 
-# Setup session (same as before)
+# Define tools
+@tool
+def process_payment(amount: float, order_id: str) -> str:
+    """Process a payment for an order."""
+    return f"Payment of ${amount} processed for order {order_id}"
+
+def reverse_payment(args, result):
+    """Reverse a payment."""
+    print(f"  ✓ Reversed: Refunded ${args['amount']} for order {args['order_id']}")
+    return f"Refunded ${args['amount']} for order {args['order_id']}"
+
+# Step 1: Create user and external session (same as before)
 user_repo = UserRepository()
 user = user_repo.find_by_username("rootusr")
 
 external_repo = ExternalSessionRepository()
-session = external_repo.create(ExternalSession(
+external_session = external_repo.create(ExternalSession(
     user_id=user.id,
-    session_name="Service Agent",
+    session_name="Payment Processing",
     created_at=datetime.now()
 ))
 
-# Define tools
-order_db = {}
-
-@tool
-def create_order(order_id: str, amount: float) -> str:
-    """Create an order."""
-    order_db[order_id] = {"amount": amount}
-    return f"Order {order_id} created for ${amount}"
-
-def reverse_create_order(args, result):
-    """Undo order creation."""
-    if args['order_id'] in order_db:
-        del order_db[args['order_id']]
-    return f"Order {args['order_id']} deleted"
-
-# Initialize service (auto-creates repositories, loads model config)
+# Step 2: Initialize service (auto-creates all repositories)
 service = AgentService()
+# ✓ No manual repository creation
+# ✓ Model config loaded from environment
+# ✓ All dependencies managed internally
 
-# Create agent (model auto-configured from environment)
+# Step 3: Create agent with minimal code
 agent = service.create_new_agent(
-    external_session_id=session.id,
-    tools=[create_order],
-    reverse_tools={"create_order": reverse_create_order},
+    external_session_id=external_session.id,
+    tools=[process_payment],
+    reverse_tools={"process_payment": reverse_payment},
     auto_checkpoint=True
 )
+# ✓ No model creation needed
+# ✓ No repository passing needed
+# ✓ Best-practice defaults applied
 
-# Use the agent
-agent.run("Create order #1001 for $250")
+# Step 4: Use the agent
+response1 = agent.run("Process a payment of $150 for order #1001")
+print(response1)
 
 # Create checkpoint
-checkpoint_msg = agent.create_checkpoint_tool("Safe point")
+checkpoint_msg = agent.create_checkpoint_tool("Before second payment")
 checkpoint_id = int(checkpoint_msg.split("ID: ")[1].split(")")[0])
 
-# Continue
-agent.run("Create order #1002 for $150")
+response2 = agent.run("Process another payment of $250 for order #1002")
+print(response2)
 
-# One-line rollback with automatic tool reversal!
-rolled_back = service.rollback_to_checkpoint(
-    external_session_id=session.id,
-    checkpoint_id=checkpoint_id,
-    rollback_tools=True  # Automatically reverses tools!
-)
+# Step 5: List checkpoints using service utility
+checkpoints = service.list_checkpoints(agent.internal_session.id)
+print(f"Total checkpoints: {len(checkpoints)}")
 
-# Continue on new branch
-if rolled_back:
-    rolled_back.run("Create order #2001 for $500 instead")
-
-# One-line session resumption
+# Step 6: Resume session later
+# Simulate app restart
 service = AgentService()
-resumed = service.resume_agent(external_session_id=session.id)
-if resumed:
-    resumed.run("What orders do we have?")
+resumed_agent = service.resume_agent(
+    external_session_id=external_session.id,
+    tools=[process_payment],
+    reverse_tools={"process_payment": reverse_payment}
+)
+# ✓ Conversation history automatically restored
+# ✓ Session state automatically loaded
+# ✓ Ready to continue immediately
+
+if resumed_agent:
+    response3 = resumed_agent.run("What payments did we process?")
+    print(response3)
+
+# Step 7: Rollback with automatic tool reversal
+rolled_back = service.rollback_to_checkpoint(
+    external_session_id=external_session.id,
+    checkpoint_id=checkpoint_id,
+    rollback_tools=True,  # Automatically reverses payment operations!
+    tools=[process_payment],
+    reverse_tools={"process_payment": reverse_payment}
+)
+# ✓ Checkpoint retrieved automatically
+# ✓ Tool operations reversed automatically
+# ✓ New branch created automatically
+# ✓ Ready to use immediately
+
+if rolled_back:
+    response4 = rolled_back.run("Let's try a different payment amount: $300 for order #1003")
+    print(response4)
+    print()
 ```
 
 **Key Differences:**

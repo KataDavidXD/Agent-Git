@@ -674,14 +674,24 @@
 <span class="sd">            name: Name for the checkpoint</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+            <span class="n">current_track</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">get_track</span><span class="p">()</span>
+            
             <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">Checkpoint</span><span class="o">.</span><span class="n">from_internal_session</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="p">,</span>
                 <span class="n">checkpoint_name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-                <span class="n">is_auto</span><span class="o">=</span><span class="kc">True</span>
+                <span class="n">is_auto</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">tool_invocations</span><span class="o">=</span><span class="p">[</span> 
+                  <span class="p">{</span>
+                      <span class="s2">&quot;tool_name&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">tool_name</span><span class="p">,</span>
+                      <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">args</span><span class="p">,</span>
+                      <span class="s2">&quot;result&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">result</span><span class="p">,</span>
+                      <span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">success</span><span class="p">,</span>
+                      <span class="s2">&quot;error_message&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">error_message</span>
+                  <span class="p">}</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">current_track</span>
+              <span class="p">]</span>
             <span class="p">)</span>
             
             <span class="c1"># Store tool track position</span>
-            <span class="n">current_track</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">get_track</span><span class="p">()</span>
             <span class="n">checkpoint</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;tool_track_position&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">current_track</span><span class="p">)</span>
             
             <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span>
@@ -708,14 +718,25 @@
             <span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Checkpoint at </span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:%S&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
         
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+            
+            <span class="n">current_track</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">get_track</span><span class="p">()</span>
             <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">Checkpoint</span><span class="o">.</span><span class="n">from_internal_session</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">internal_session</span><span class="p">,</span>
                 <span class="n">checkpoint_name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-                <span class="n">is_auto</span><span class="o">=</span><span class="kc">False</span>
+                <span class="n">is_auto</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">tool_invocations</span><span class="o">=</span><span class="p">[</span>  
+                  <span class="p">{</span>
+                      <span class="s2">&quot;tool_name&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">tool_name</span><span class="p">,</span>
+                      <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">args</span><span class="p">,</span>
+                      <span class="s2">&quot;result&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">result</span><span class="p">,</span>
+                      <span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">success</span><span class="p">,</span>
+                      <span class="s2">&quot;error_message&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">error_message</span>
+                  <span class="p">}</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">current_track</span>
+              <span class="p">]</span>
             <span class="p">)</span>
             
             <span class="c1"># Store tool track position</span>
-            <span class="n">current_track</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">get_track</span><span class="p">()</span>
+            
             <span class="n">checkpoint</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;tool_track_position&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">current_track</span><span class="p">)</span>
             
             <span class="n">saved_checkpoint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_repo</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span>
@@ -1074,8 +1095,19 @@
         <span class="c1"># Restore tool track position if available</span>
         <span class="k">if</span> <span class="s2">&quot;tool_track_position&quot;</span> <span class="ow">in</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">metadata</span><span class="p">:</span>
             <span class="n">track_position</span> <span class="o">=</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;tool_track_position&quot;</span><span class="p">]</span>
-            <span class="c1"># Truncate tool track to checkpoint position</span>
-            <span class="n">agent</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">truncate_track</span><span class="p">(</span><span class="n">track_position</span><span class="p">)</span>
+            <span class="c1"># RESTORE THE TOOL TRACK FROM CHECKPOINT</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">agentgit.core.rollback_protocol</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolInvocationRecord</span>
+            <span class="k">for</span> <span class="n">inv</span> <span class="ow">in</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">tool_invocations</span><span class="p">:</span>
+                <span class="n">record</span> <span class="o">=</span> <span class="n">ToolInvocationRecord</span><span class="p">(</span>
+                    <span class="n">tool_name</span><span class="o">=</span><span class="n">inv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tool_name&quot;</span><span class="p">),</span>
+                    <span class="n">args</span><span class="o">=</span><span class="n">inv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;args&quot;</span><span class="p">,</span> <span class="p">{}),</span>
+                    <span class="n">result</span><span class="o">=</span><span class="n">inv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">),</span>
+                    <span class="n">success</span><span class="o">=</span><span class="n">inv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;success&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span>
+                    <span class="n">error_message</span><span class="o">=</span><span class="n">inv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;error_message&quot;</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">agent</span><span class="o">.</span><span class="n">tool_rollback_registry</span><span class="o">.</span><span class="n">_track</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+            <span class="c1"># # Truncate tool track to checkpoint position(this does nothing, leave it here will be deleted)</span>
+            <span class="c1"># agent.tool_rollback_registry.truncate_track(track_position)</span>
         
         <span class="n">agent</span><span class="o">.</span><span class="n">_save_internal_session</span><span class="p">()</span>
         

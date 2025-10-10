@@ -592,14 +592,24 @@ class RollbackAgent:
             name: Name for the checkpoint
         """
         if self.checkpoint_repo and self.internal_session and self.internal_session.id:
+            current_track = self.tool_rollback_registry.get_track()
+            
             checkpoint = Checkpoint.from_internal_session(
                 self.internal_session,
                 checkpoint_name=name,
-                is_auto=True
+                is_auto=True,
+                tool_invocations=[ 
+                  {
+                      "tool_name": record.tool_name,
+                      "args": record.args,
+                      "result": record.result,
+                      "success": record.success,
+                      "error_message": record.error_message
+                  } for record in current_track
+              ]
             )
             
             # Store tool track position
-            current_track = self.tool_rollback_registry.get_track()
             checkpoint.metadata["tool_track_position"] = len(current_track)
             
             self.checkpoint_repo.create(checkpoint)
@@ -624,14 +634,25 @@ class RollbackAgent:
             name = f"Checkpoint at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         
         if self.checkpoint_repo and self.internal_session and self.internal_session.id:
+            
+            current_track = self.tool_rollback_registry.get_track()
             checkpoint = Checkpoint.from_internal_session(
                 self.internal_session,
                 checkpoint_name=name,
-                is_auto=False
+                is_auto=False,
+                tool_invocations=[  
+                  {
+                      "tool_name": record.tool_name,
+                      "args": record.args,
+                      "result": record.result,
+                      "success": record.success,
+                      "error_message": record.error_message
+                  } for record in current_track
+              ]
             )
             
             # Store tool track position
-            current_track = self.tool_rollback_registry.get_track()
+            
             checkpoint.metadata["tool_track_position"] = len(current_track)
             
             saved_checkpoint = self.checkpoint_repo.create(checkpoint)
@@ -954,8 +975,19 @@ class RollbackAgent:
         # Restore tool track position if available
         if "tool_track_position" in checkpoint.metadata:
             track_position = checkpoint.metadata["tool_track_position"]
-            # Truncate tool track to checkpoint position
-            agent.tool_rollback_registry.truncate_track(track_position)
+            # RESTORE THE TOOL TRACK FROM CHECKPOINT
+            from agentgit.core.rollback_protocol import ToolInvocationRecord
+            for inv in checkpoint.tool_invocations:
+                record = ToolInvocationRecord(
+                    tool_name=inv.get("tool_name"),
+                    args=inv.get("args", {}),
+                    result=inv.get("result"),
+                    success=inv.get("success", True),
+                    error_message=inv.get("error_message")
+                )
+                agent.tool_rollback_registry._track.append(record)
+            # # Truncate tool track to checkpoint position(this does nothing, leave it here will be deleted)
+            # agent.tool_rollback_registry.truncate_track(track_position)
         
         agent._save_internal_session()
         
