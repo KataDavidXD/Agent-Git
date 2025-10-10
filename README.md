@@ -101,6 +101,11 @@ You can download the **pre-release version** of Agent Git as a Python wheel from
 
 ## Installation
 
+## Quick Start Video: Download & Prepare to Use
+
+[![Watch the video](https://img.youtube.com/vi/1bTJ0RTdjzU/maxresdefault.jpg)](https://youtu.be/1bTJ0RTdjzU?si=vXsCibB5C8gTmu29)
+
+
 ### Using uv (Recommended)
 
 ```bash
