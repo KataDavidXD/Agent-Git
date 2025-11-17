@@ -41,7 +41,7 @@
 
 [![WeChat](https://img.shields.io/badge/WeChat-AgentGit-green?logo=wechat&logoColor=white)](https://github.com/user-attachments/assets/e0759fe0-45a9-40b1-9c5c-a9869aee5b63)
 [![Reddit](https://img.shields.io/badge/Reddit-AgentGit-orange?logo=reddit&logoColor=white)](https://www.reddit.com/r/AgentGit/s/mstmirU8zo)
-[![Discord](https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=auto)](https://discord.gg/C82Z9C6P)
+[![Discord](https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=auto)](https://discord.gg/AUDaTm7p) 
 
 </div>
 
