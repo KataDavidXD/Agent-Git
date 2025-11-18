@@ -10,9 +10,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import unittest
 import tempfile
 
-from src.auth.auth_service import AuthService
-from src.auth.user import User
-from src.database.repositories.user_repository import UserRepository
+from agentgit.auth.auth_service import AuthService
+from agentgit.auth.user import User
+from agentgit.database.repositories.user_repository import UserRepository
+from dotenv import load_dotenv
+load_dotenv()
 
 
 class TestUserManagement(unittest.TestCase):

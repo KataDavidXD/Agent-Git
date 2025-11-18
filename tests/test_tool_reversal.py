@@ -3,6 +3,7 @@
 Tests that tools with reverse handlers correctly undo their operations during rollback.
 """
 
+from json import load
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,13 +20,15 @@ from langchain_core.tools import tool
 # Suppress Pydantic V2 deprecation warnings from LangChain
 warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*__fields__.*")
 
-from src.agents.rollback_agent import RollbackAgent
-from src.checkpoints.checkpoint import Checkpoint
-from src.database.repositories.checkpoint_repository import CheckpointRepository
-from src.database.repositories.internal_session_repository import InternalSessionRepository
-from src.database.repositories.external_session_repository import ExternalSessionRepository
-from src.database.repositories.user_repository import UserRepository
-from src.sessions.external_session import ExternalSession
+from agentgit.agents.rollback_agent import RollbackAgent
+from agentgit.checkpoints.checkpoint import Checkpoint
+from agentgit.database.repositories.checkpoint_repository import CheckpointRepository
+from agentgit.database.repositories.internal_session_repository import InternalSessionRepository
+from agentgit.database.repositories.external_session_repository import ExternalSessionRepository
+from agentgit.database.repositories.user_repository import UserRepository
+from agentgit.sessions.external_session import ExternalSession
+from dotenv import load_dotenv
+load_dotenv()
 
 
 class TestToolReversal(unittest.TestCase):

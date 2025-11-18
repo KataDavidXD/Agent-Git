@@ -3,13 +3,16 @@
 Handles CRUD operations for internal langgraph sessions in the rollback agent system.
 """
 
-import sqlite3
 import json
 from typing import Optional, List
 from datetime import datetime
 
 from agentgit.sessions.internal_session import InternalSession
-from agentgit.database.db_config import get_database_path
+from agentgit.database.db_config import (
+    get_database_path,
+    get_db_connection,
+    is_postgres_backend,
+)
 
 
 
@@ -36,76 +39,116 @@ class InternalSessionRepository:
             db_path: Path to SQLite database. If None, uses configured default.
         """
         self.db_path = db_path or get_database_path()
+        self._backend = "postgres" if is_postgres_backend() else "sqlite"
         self._init_db()
     
     def _init_db(self):
         """Initialize the internal sessions table if it doesn't exist."""
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with get_db_connection(self.db_path) as conn:
             cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS internal_sessions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    external_session_id INTEGER NOT NULL,
-                    langgraph_session_id TEXT UNIQUE NOT NULL,
-                    state_data TEXT,
-                    conversation_history TEXT,
-                    created_at TEXT NOT NULL,
-                    is_current INTEGER DEFAULT 0,
-                    checkpoint_count INTEGER DEFAULT 0,
-                    parent_session_id INTEGER,
-                    branch_point_checkpoint_id INTEGER,
-                    tool_invocation_count INTEGER DEFAULT 0,
-                    metadata TEXT,
-                    FOREIGN KEY (external_session_id) REFERENCES external_sessions(id) ON DELETE CASCADE,
-                    FOREIGN KEY (parent_session_id) REFERENCES internal_sessions(id) ON DELETE SET NULL,
-                    FOREIGN KEY (branch_point_checkpoint_id) REFERENCES checkpoints(id) ON DELETE SET NULL
+            if self._backend == "postgres":
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS internal_sessions (
+                        id SERIAL PRIMARY KEY,
+                        external_session_id INTEGER NOT NULL,
+                        langgraph_session_id TEXT UNIQUE NOT NULL,
+                        state_data TEXT,
+                        conversation_history TEXT,
+                        created_at TEXT NOT NULL,
+                        is_current INTEGER DEFAULT 0,
+                        checkpoint_count INTEGER DEFAULT 0,
+                        parent_session_id INTEGER,
+                        branch_point_checkpoint_id INTEGER,
+                        tool_invocation_count INTEGER DEFAULT 0,
+                        metadata TEXT,
+                        FOREIGN KEY (external_session_id) REFERENCES external_sessions(id) ON DELETE CASCADE,
+                        FOREIGN KEY (parent_session_id) REFERENCES internal_sessions(id) ON DELETE SET NULL
+                    )
+                    """
                 )
-            """)
-            
-            # Check for migration needs
-            cursor.execute("PRAGMA table_info(internal_sessions)")
-            columns = [column[1] for column in cursor.fetchall()]
-            
+                cursor.execute(
+                    """
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_name = 'internal_sessions'
+                    """
+                )
+                columns = [row[0] for row in cursor.fetchall()]
+            else:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS internal_sessions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        external_session_id INTEGER NOT NULL,
+                        langgraph_session_id TEXT UNIQUE NOT NULL,
+                        state_data TEXT,
+                        conversation_history TEXT,
+                        created_at TEXT NOT NULL,
+                        is_current INTEGER DEFAULT 0,
+                        checkpoint_count INTEGER DEFAULT 0,
+                        parent_session_id INTEGER,
+                        branch_point_checkpoint_id INTEGER,
+                        tool_invocation_count INTEGER DEFAULT 0,
+                        metadata TEXT,
+                        FOREIGN KEY (external_session_id) REFERENCES external_sessions(id) ON DELETE CASCADE,
+                        FOREIGN KEY (parent_session_id) REFERENCES internal_sessions(id) ON DELETE SET NULL,
+                        FOREIGN KEY (branch_point_checkpoint_id) REFERENCES checkpoints(id) ON DELETE SET NULL
+                    )
+                    """
+                )
+                # Check for migration needs
+                cursor.execute("PRAGMA table_info(internal_sessions)")
+                columns = [column[1] for column in cursor.fetchall()]
+
             # Add new columns if they don't exist
-            if 'parent_session_id' not in columns:
-                cursor.execute("ALTER TABLE internal_sessions ADD COLUMN parent_session_id INTEGER")
-            
-            if 'branch_point_checkpoint_id' not in columns:
-                cursor.execute("ALTER TABLE internal_sessions ADD COLUMN branch_point_checkpoint_id INTEGER")
-            
-            if 'tool_invocation_count' not in columns:
-                cursor.execute("ALTER TABLE internal_sessions ADD COLUMN tool_invocation_count INTEGER DEFAULT 0")
-            
-            if 'metadata' not in columns:
+            if "parent_session_id" not in columns:
+                cursor.execute(
+                    "ALTER TABLE internal_sessions ADD COLUMN parent_session_id INTEGER"
+                )
+
+            if "branch_point_checkpoint_id" not in columns:
+                cursor.execute(
+                    "ALTER TABLE internal_sessions ADD COLUMN branch_point_checkpoint_id INTEGER"
+                )
+
+            if "tool_invocation_count" not in columns:
+                cursor.execute(
+                    "ALTER TABLE internal_sessions ADD COLUMN tool_invocation_count INTEGER DEFAULT 0"
+                )
+
+            if "metadata" not in columns:
                 cursor.execute("ALTER TABLE internal_sessions ADD COLUMN metadata TEXT")
-            
-            cursor.execute("""
+
+            cursor.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_internal_sessions_external 
                 ON internal_sessions(external_session_id)
-            """)
-            
-            cursor.execute("""
+                """
+            )
+
+            cursor.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_internal_sessions_langgraph 
                 ON internal_sessions(langgraph_session_id)
-            """)
-            
-            cursor.execute("""
+                """
+            )
+
+            cursor.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_internal_sessions_parent 
                 ON internal_sessions(parent_session_id)
-            """)
-            
-            cursor.execute("""
+                """
+            )
+
+            cursor.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_internal_sessions_branch 
                 ON internal_sessions(branch_point_checkpoint_id)
-            """)
-            
+                """
+            )
+
             conn.commit()
-        finally:
-            conn.close()
     
     def create(self, session: InternalSession) -> InternalSession:
         """Create a new internal session.
@@ -125,36 +168,59 @@ class InternalSessionRepository:
         
         session_dict = session.to_dict()
         
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with get_db_connection(self.db_path) as conn:
             cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
+            if self._backend == "postgres":
+                cursor.execute(
+                    """
+                    INSERT INTO internal_sessions 
+                    (external_session_id, langgraph_session_id, state_data, conversation_history, 
+                     created_at, is_current, checkpoint_count, parent_session_id,
+                     branch_point_checkpoint_id, tool_invocation_count, metadata)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (
+                        session.external_session_id,
+                        session.langgraph_session_id,
+                        json.dumps(session.session_state),
+                        json.dumps(session.conversation_history),
+                        session.created_at.isoformat(),
+                        1 if session.is_current else 0,
+                        session.checkpoint_count,
+                        session.parent_session_id,
+                        session.branch_point_checkpoint_id,
+                        session.tool_invocation_count,
+                        json.dumps(session.metadata) if session.metadata else None,
+                    ),
+                )
+                session.id = cursor.fetchone()[0]
+            else:
+                cursor.execute(
+                    """
+                    INSERT INTO internal_sessions 
+                    (external_session_id, langgraph_session_id, state_data, conversation_history, 
+                     created_at, is_current, checkpoint_count, parent_session_id,
+                     branch_point_checkpoint_id, tool_invocation_count, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        session.external_session_id,
+                        session.langgraph_session_id,
+                        json.dumps(session.session_state),
+                        json.dumps(session.conversation_history),
+                        session.created_at.isoformat(),
+                        1 if session.is_current else 0,
+                        session.checkpoint_count,
+                        session.parent_session_id,
+                        session.branch_point_checkpoint_id,
+                        session.tool_invocation_count,
+                        json.dumps(session.metadata) if session.metadata else None,
+                    ),
+                )
+                session.id = cursor.lastrowid
             
-            cursor.execute("""
-                INSERT INTO internal_sessions 
-                (external_session_id, langgraph_session_id, state_data, conversation_history, 
-                 created_at, is_current, checkpoint_count, parent_session_id,
-                 branch_point_checkpoint_id, tool_invocation_count, metadata)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                session.external_session_id,
-                session.langgraph_session_id,
-                json.dumps(session.session_state),
-                json.dumps(session.conversation_history),
-                session.created_at.isoformat(),
-                1 if session.is_current else 0,
-                session.checkpoint_count,
-                session.parent_session_id,
-                session.branch_point_checkpoint_id,
-                session.tool_invocation_count,
-                json.dumps(session.metadata) if session.metadata else None
-            ))
-            
-            session.id = cursor.lastrowid
             conn.commit()
-        finally:
-            conn.close()
         
         return session
     
@@ -176,31 +242,47 @@ class InternalSessionRepository:
         if session.is_current:
             self._mark_all_not_current(session.external_session_id, exclude_id=session.id)
         
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with get_db_connection(self.db_path) as conn:
             cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            
-            cursor.execute("""
-                UPDATE internal_sessions 
-                SET state_data = ?, conversation_history = ?, is_current = ?, 
-                    checkpoint_count = ?, tool_invocation_count = ?, metadata = ?
-                WHERE id = ?
-            """, (
-                json.dumps(session.session_state),
-                json.dumps(session.conversation_history),
-                1 if session.is_current else 0,
-                session.checkpoint_count,
-                session.tool_invocation_count,
-                json.dumps(session.metadata) if session.metadata else None,
-                session.id
-            ))
+            if self._backend == "postgres":
+                cursor.execute(
+                    """
+                    UPDATE internal_sessions 
+                    SET state_data = %s, conversation_history = %s, is_current = %s, 
+                        checkpoint_count = %s, tool_invocation_count = %s, metadata = %s
+                    WHERE id = %s
+                    """,
+                    (
+                        json.dumps(session.session_state),
+                        json.dumps(session.conversation_history),
+                        1 if session.is_current else 0,
+                        session.checkpoint_count,
+                        session.tool_invocation_count,
+                        json.dumps(session.metadata) if session.metadata else None,
+                        session.id,
+                    ),
+                )
+            else:
+                cursor.execute(
+                    """
+                    UPDATE internal_sessions 
+                    SET state_data = ?, conversation_history = ?, is_current = ?, 
+                        checkpoint_count = ?, tool_invocation_count = ?, metadata = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        json.dumps(session.session_state),
+                        json.dumps(session.conversation_history),
+                        1 if session.is_current else 0,
+                        session.checkpoint_count,
+                        session.tool_invocation_count,
+                        json.dumps(session.metadata) if session.metadata else None,
+                        session.id,
+                    ),
+                )
             
             conn.commit()
             return cursor.rowcount > 0
-        finally:
-            conn.close()
     
     def get_by_id(self, session_id: int) -> Optional[InternalSession]:
         """Get an internal session by ID.
@@ -211,26 +293,36 @@ class InternalSessionRepository:
         Returns:
             InternalSession if found, None otherwise.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with get_db_connection(self.db_path) as conn:
             cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            
-            cursor.execute("""
-                SELECT id, external_session_id, langgraph_session_id, state_data, 
-                       conversation_history, created_at, is_current, checkpoint_count,
-                       parent_session_id, branch_point_checkpoint_id, 
-                       tool_invocation_count, metadata
-                FROM internal_sessions
-                WHERE id = ?
-            """, (session_id,))
+            if self._backend == "postgres":
+                cursor.execute(
+                    """
+                    SELECT id, external_session_id, langgraph_session_id, state_data, 
+                           conversation_history, created_at, is_current, checkpoint_count,
+                           parent_session_id, branch_point_checkpoint_id, 
+                           tool_invocation_count, metadata
+                    FROM internal_sessions
+                    WHERE id = %s
+                    """,
+                    (session_id,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT id, external_session_id, langgraph_session_id, state_data, 
+                           conversation_history, created_at, is_current, checkpoint_count,
+                           parent_session_id, branch_point_checkpoint_id, 
+                           tool_invocation_count, metadata
+                    FROM internal_sessions
+                    WHERE id = ?
+                    """,
+                    (session_id,),
+                )
             
             row = cursor.fetchone()
             if row:
                 return self._row_to_session(row)
-        finally:
-            conn.close()
         
         return None
     
@@ -243,26 +335,36 @@ class InternalSessionRepository:
         Returns:
             InternalSession if found, None otherwise.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with get_db_connection(self.db_path) as conn:
             cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            
-            cursor.execute("""
-                SELECT id, external_session_id, langgraph_session_id, state_data, 
-                       conversation_history, created_at, is_current, checkpoint_count,
-                       parent_session_id, branch_point_checkpoint_id, 
-                       tool_invocation_count, metadata
-                FROM internal_sessions
-                WHERE langgraph_session_id = ?
-            """, (langgraph_session_id,))
+            if self._backend == "postgres":
+                cursor.execute(
+                    """
+                    SELECT id, external_session_id, langgraph_session_id, state_data, 
+                           conversation_history, created_at, is_current, checkpoint_count,
+                           parent_session_id, branch_point_checkpoint_id, 
+                           tool_invocation_count, metadata
+                    FROM internal_sessions
+                    WHERE langgraph_session_id = %s
+                    """,
+                    (langgraph_session_id,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT id, external_session_id, langgraph_session_id, state_data, 
+                           conversation_history, created_at, is_current, checkpoint_count,
+                           parent_session_id, branch_point_checkpoint_id, 
+                           tool_invocation_count, metadata
+                    FROM internal_sessions
+                    WHERE langgraph_session_id = ?
+                    """,
+                    (langgraph_session_id,),
+                )
             
             row = cursor.fetchone()
             if row:
                 return self._row_to_session(row)
-        finally:
-            conn.close()
         
         return None
     
@@ -275,26 +377,37 @@ class InternalSessionRepository:
         Returns:
             List of InternalSession objects, ordered by created_at descending.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with get_db_connection(self.db_path) as conn:
             cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            
-            cursor.execute("""
-                SELECT id, external_session_id, langgraph_session_id, state_data, 
-                       conversation_history, created_at, is_current, checkpoint_count,
-                       parent_session_id, branch_point_checkpoint_id, 
-                       tool_invocation_count, metadata
-                FROM internal_sessions
-                WHERE external_session_id = ?
-                ORDER BY created_at DESC
-            """, (external_session_id,))
+            if self._backend == "postgres":
+                cursor.execute(
+                    """
+                    SELECT id, external_session_id, langgraph_session_id, state_data, 
+                           conversation_history, created_at, is_current, checkpoint_count,
+                           parent_session_id, branch_point_checkpoint_id, 
+                           tool_invocation_count, metadata
+                    FROM internal_sessions
+                    WHERE external_session_id = %s
+                    ORDER BY created_at DESC
+                    """,
+                    (external_session_id,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT id, external_session_id, langgraph_session_id, state_data, 
+                           conversation_history, created_at, is_current, checkpoint_count,
+                           parent_session_id, branch_point_checkpoint_id, 
+                           tool_invocation_count, metadata
+                    FROM internal_sessions
+                    WHERE external_session_id = ?
+                    ORDER BY created_at DESC
+                    """,
+                    (external_session_id,),
+                )
             
             rows = cursor.fetchall()
             return [self._row_to_session(row) for row in rows]
-        finally:
-            conn.close()
     
     def get_current_session(self, external_session_id: int) -> Optional[InternalSession]:
         """Get the current internal session for an external session.
@@ -305,27 +418,38 @@ class InternalSessionRepository:
         Returns:
             The current InternalSession if found, None otherwise.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with get_db_connection(self.db_path) as conn:
             cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            
-            cursor.execute("""
-                SELECT id, external_session_id, langgraph_session_id, state_data, 
-                       conversation_history, created_at, is_current, checkpoint_count,
-                       parent_session_id, branch_point_checkpoint_id, 
-                       tool_invocation_count, metadata
-                FROM internal_sessions
-                WHERE external_session_id = ? AND is_current = 1
-                LIMIT 1
-            """, (external_session_id,))
+            if self._backend == "postgres":
+                cursor.execute(
+                    """
+                    SELECT id, external_session_id, langgraph_session_id, state_data, 
+                           conversation_history, created_at, is_current, checkpoint_count,
+                           parent_session_id, branch_point_checkpoint_id, 
+                           tool_invocation_count, metadata
+                    FROM internal_sessions
+                    WHERE external_session_id = %s AND is_current = 1
+                    LIMIT 1
+                    """,
+                    (external_session_id,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT id, external_session_id, langgraph_session_id, state_data, 
+                           conversation_history, created_at, is_current, checkpoint_count,
+                           parent_session_id, branch_point_checkpoint_id, 
+                           tool_invocation_count, metadata
+                    FROM internal_sessions
+                    WHERE external_session_id = ? AND is_current = 1
+                    LIMIT 1
+                    """,
+                    (external_session_id,),
+                )
             
             row = cursor.fetchone()
             if row:
                 return self._row_to_session(row)
-        finally:
-            conn.close()
         
         return None
     
@@ -346,22 +470,29 @@ class InternalSessionRepository:
         self._mark_all_not_current(session.external_session_id)
         
         # Mark this one as current
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with get_db_connection(self.db_path) as conn:
             cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            
-            cursor.execute("""
-                UPDATE internal_sessions 
-                SET is_current = 1
-                WHERE id = ?
-            """, (session_id,))
+            if self._backend == "postgres":
+                cursor.execute(
+                    """
+                    UPDATE internal_sessions 
+                    SET is_current = 1
+                    WHERE id = %s
+                    """,
+                    (session_id,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    UPDATE internal_sessions 
+                    SET is_current = 1
+                    WHERE id = ?
+                    """,
+                    (session_id,),
+                )
             
             conn.commit()
             return cursor.rowcount > 0
-        finally:
-            conn.close()
     
     def delete(self, session_id: int) -> bool:
         """Delete an internal session.
@@ -372,20 +503,21 @@ class InternalSessionRepository:
         Returns:
             True if deletion successful, False otherwise.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with get_db_connection(self.db_path) as conn:
             cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            
-            cursor.execute("""
-                DELETE FROM internal_sessions WHERE id = ?
-            """, (session_id,))
+            if self._backend == "postgres":
+                cursor.execute(
+                    "DELETE FROM internal_sessions WHERE id = %s",
+                    (session_id,),
+                )
+            else:
+                cursor.execute(
+                    "DELETE FROM internal_sessions WHERE id = ?",
+                    (session_id,),
+                )
             
             conn.commit()
             return cursor.rowcount > 0
-        finally:
-            conn.close()
     
     def count_sessions(self, external_session_id: int) -> int:
         """Count internal sessions for an external session.
@@ -396,20 +528,26 @@ class InternalSessionRepository:
         Returns:
             Number of internal sessions.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with get_db_connection(self.db_path) as conn:
             cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            
-            cursor.execute("""
-                SELECT COUNT(*) FROM internal_sessions
-                WHERE external_session_id = ?
-            """, (external_session_id,))
+            if self._backend == "postgres":
+                cursor.execute(
+                    """
+                    SELECT COUNT(*) FROM internal_sessions
+                    WHERE external_session_id = %s
+                    """,
+                    (external_session_id,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT COUNT(*) FROM internal_sessions
+                    WHERE external_session_id = ?
+                    """,
+                    (external_session_id,),
+                )
             
             return cursor.fetchone()[0]
-        finally:
-            conn.close()
     
     def get_branch_sessions(self, parent_session_id: int) -> List[InternalSession]:
         """Get all sessions branched from a parent session.
@@ -420,26 +558,37 @@ class InternalSessionRepository:
         Returns:
             List of InternalSession objects branched from the parent.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with get_db_connection(self.db_path) as conn:
             cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            
-            cursor.execute("""
-                SELECT id, external_session_id, langgraph_session_id, state_data, 
-                       conversation_history, created_at, is_current, checkpoint_count,
-                       parent_session_id, branch_point_checkpoint_id, 
-                       tool_invocation_count, metadata
-                FROM internal_sessions
-                WHERE parent_session_id = ?
-                ORDER BY created_at DESC
-            """, (parent_session_id,))
+            if self._backend == "postgres":
+                cursor.execute(
+                    """
+                    SELECT id, external_session_id, langgraph_session_id, state_data, 
+                           conversation_history, created_at, is_current, checkpoint_count,
+                           parent_session_id, branch_point_checkpoint_id, 
+                           tool_invocation_count, metadata
+                    FROM internal_sessions
+                    WHERE parent_session_id = %s
+                    ORDER BY created_at DESC
+                    """,
+                    (parent_session_id,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT id, external_session_id, langgraph_session_id, state_data, 
+                           conversation_history, created_at, is_current, checkpoint_count,
+                           parent_session_id, branch_point_checkpoint_id, 
+                           tool_invocation_count, metadata
+                    FROM internal_sessions
+                    WHERE parent_session_id = ?
+                    ORDER BY created_at DESC
+                    """,
+                    (parent_session_id,),
+                )
             
             rows = cursor.fetchall()
             return [self._row_to_session(row) for row in rows]
-        finally:
-            conn.close()
     
     def get_session_lineage(self, session_id: int) -> List[InternalSession]:
         """Get the lineage of a session (path from root to this session).
@@ -472,22 +621,29 @@ class InternalSessionRepository:
         Returns:
             True if update successful, False otherwise.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with get_db_connection(self.db_path) as conn:
             cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            
-            cursor.execute("""
-                UPDATE internal_sessions 
-                SET tool_invocation_count = tool_invocation_count + ?
-                WHERE id = ?
-            """, (increment, session_id))
+            if self._backend == "postgres":
+                cursor.execute(
+                    """
+                    UPDATE internal_sessions 
+                    SET tool_invocation_count = tool_invocation_count + %s
+                    WHERE id = %s
+                    """,
+                    (increment, session_id),
+                )
+            else:
+                cursor.execute(
+                    """
+                    UPDATE internal_sessions 
+                    SET tool_invocation_count = tool_invocation_count + ?
+                    WHERE id = ?
+                    """,
+                    (increment, session_id),
+                )
             
             conn.commit()
             return cursor.rowcount > 0
-        finally:
-            conn.close()
     
     def _mark_all_not_current(self, external_session_id: int, exclude_id: Optional[int] = None):
         """Mark all internal sessions as not current for an external session.
@@ -496,28 +652,48 @@ class InternalSessionRepository:
             external_session_id: The ID of the external session.
             exclude_id: Optional ID to exclude from the update.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
+        with get_db_connection(self.db_path) as conn:
             cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            
             if exclude_id:
-                cursor.execute("""
-                    UPDATE internal_sessions 
-                    SET is_current = 0
-                    WHERE external_session_id = ? AND id != ?
-                """, (external_session_id, exclude_id))
+                if self._backend == "postgres":
+                    cursor.execute(
+                        """
+                        UPDATE internal_sessions 
+                        SET is_current = 0
+                        WHERE external_session_id = %s AND id != %s
+                        """,
+                        (external_session_id, exclude_id),
+                    )
+                else:
+                    cursor.execute(
+                        """
+                        UPDATE internal_sessions 
+                        SET is_current = 0
+                        WHERE external_session_id = ? AND id != ?
+                        """,
+                        (external_session_id, exclude_id),
+                    )
             else:
-                cursor.execute("""
-                    UPDATE internal_sessions 
-                    SET is_current = 0
-                    WHERE external_session_id = ?
-                """, (external_session_id,))
+                if self._backend == "postgres":
+                    cursor.execute(
+                        """
+                        UPDATE internal_sessions 
+                        SET is_current = 0
+                        WHERE external_session_id = %s
+                        """,
+                        (external_session_id,),
+                    )
+                else:
+                    cursor.execute(
+                        """
+                        UPDATE internal_sessions 
+                        SET is_current = 0
+                        WHERE external_session_id = ?
+                        """,
+                        (external_session_id,),
+                    )
             
             conn.commit()
-        finally:
-            conn.close()
     
     def _row_to_session(self, row) -> InternalSession:
         """Convert a database row to an InternalSession object.

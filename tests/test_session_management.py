@@ -5,6 +5,8 @@ Tests external/internal session relationships, branching, and session lifecycle.
 
 import sys
 import os
+
+from dotenv.main import _load_dotenv_disabled
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import unittest
@@ -16,15 +18,17 @@ from langchain_openai import ChatOpenAI
 # Suppress Pydantic V2 deprecation warnings from LangChain
 warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*__fields__.*")
 
-from src.sessions.external_session import ExternalSession
-from src.sessions.internal_session import InternalSession
-from src.database.repositories.external_session_repository import ExternalSessionRepository
-from src.database.repositories.internal_session_repository import InternalSessionRepository
-from src.database.repositories.checkpoint_repository import CheckpointRepository
-from src.database.repositories.user_repository import UserRepository
-from src.auth.user import User
-from src.agents.agent_service import AgentService
-from src.checkpoints.checkpoint import Checkpoint
+from agentgit.sessions.external_session import ExternalSession
+from agentgit.sessions.internal_session import InternalSession
+from agentgit.database.repositories.external_session_repository import ExternalSessionRepository
+from agentgit.database.repositories.internal_session_repository import InternalSessionRepository
+from agentgit.database.repositories.checkpoint_repository import CheckpointRepository
+from agentgit.database.repositories.user_repository import UserRepository
+from agentgit.auth.user import User
+from agentgit.agents.agent_service import AgentService
+from agentgit.checkpoints.checkpoint import Checkpoint
+from dotenv import load_dotenv
+load_dotenv()
 
 
 class TestSessionManagement(unittest.TestCase):
