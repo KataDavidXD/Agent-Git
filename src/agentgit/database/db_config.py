@@ -1,111 +1,173 @@
-"""Database configuration for the rollback agent system.
-
-Repositories can switch between SQLite and PostgreSQL via a
-single environment variable.
-"""
+"""Database configuration for the rollback agent system using SQLAlchemy ORM."""
 
 import os
-import sqlite3
 from contextlib import contextmanager
 from typing import Optional
 
-from agentgit.database.postgres_config import get_postgres_connection
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import StaticPool
+
+from agentgit.database.models import Base
 
 
-def get_database_path() -> str:
-    """Get the path to the SQLite database.
+def _get_engine():
+    """Get or create the SQLAlchemy engine."""
+    global _engine
+    if _engine is None:
+        db_type = os.getenv("DATABASE", "sqlite").strip().lower()
+        path_or_dsn = get_database_path()
+        
+        if db_type == "postgres":
+            # PostgreSQL connection
+            _engine = create_engine(
+                path_or_dsn,
+                echo=False,
+                pool_pre_ping=True,
+            )
+        else:
+            # SQLite connection
+            database_url = f"sqlite:///{path_or_dsn}"
+            _engine = create_engine(
+                database_url,
+                echo=False,
+                connect_args={"check_same_thread": False},
+                poolclass=StaticPool,
+            )
+            
+            # Enable foreign keys for SQLite
+            @event.listens_for(_engine, "connect")
+            def set_sqlite_pragma(dbapi_conn, connection_record):
+                cursor = dbapi_conn.cursor()
+                cursor.execute("PRAGMA foreign_keys=ON")
+                cursor.close()
     
-    Returns:
-        Path to the database file
+    return _engine
+
+
+# Global engine and session factory
+_engine = None
+_SessionLocal = None
+
+
+def _get_session_factory():
+    """Get or create the session factory."""
+    global _SessionLocal
+    if _SessionLocal is None:
+        engine = _get_engine()
+        _SessionLocal = sessionmaker(
+            autocommit=False,
+            autoflush=False,
+            bind=engine
+        )
+    return _SessionLocal
+
+
+def get_database_path(db_path: Optional[str] = None) -> str:
     """
-    # Create data directory if it doesn't exist
+    Resolve and return the effective database path or connection string according to environment/configuration.
+
+    For SQLite, the resolution order is:
+      1. If the explicit ``db_path`` argument is provided, return it directly.
+      2. If the environment variable ``DATABASE_URL`` exists and starts with ``sqlite://``, extract and return its path.
+      3. Otherwise, return the default SQLite path ``data/rollback_agent.db`` under the project root.
+
+    For PostgreSQL, if the ``DATABASE`` environment variable is ``postgres``, return the ``DATABASE_URL`` as the connection string.
+    """
+    # Explicitly specified database path
+    if db_path:
+        return db_path
+    db_type = os.getenv("DATABASE", "sqlite").strip().lower()
+    db_url = (os.getenv("DATABASE_URL") or "").strip()
+
+    # PostgreSQL connection string via environment/config
+    if db_type == "postgres":
+        return db_url
+    
+    # SQLite connection path
+    if db_url and db_url.lower().startswith("sqlite://"):
+        lower_url = db_url.lower()
+        if lower_url.startswith("sqlite:///"):
+            return db_url[len("sqlite:///") :]
+        return db_url.split("://", 1)[1]
+
+    # Default SQLite path under project root's 'data' directory
     data_dir = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
         "data",
     )
     os.makedirs(data_dir, exist_ok=True)
-    
-    # Return path to database file
+
     return os.path.join(data_dir, "rollback_agent.db")
-
-
-def get_db_backend() -> str:
-    """Return the configured database backend.
-
-    Uses the ``DATABASE`` and ``DATABASE_URL`` environment variables together.
-    Only ``DATABASE=postgres`` with a PostgreSQL ``DATABASE_URL`` enables the
-    PostgreSQL backend. All other valid combinations resolve to SQLite.
-    """
-    backend = os.getenv("DATABASE", "sqlite").strip().lower()
-    db_url = os.getenv("DATABASE_URL", "").strip()
-
-    if backend not in {"sqlite", "postgres"}:
-        raise RuntimeError(
-            "DATABASE must be either 'sqlite' or 'postgres' when set."
-        )
-
-    # PostgreSQL: require explicit DATABASE=postgres and a postgres URL
-    if backend == "postgres":
-        if not db_url:
-            raise RuntimeError(
-                "DATABASE is set to 'postgres' but DATABASE_URL is empty. "
-                "Please set DATABASE_URL to a postgresql:// or postgres:// DSN."
-            )
-        scheme = db_url.lower()
-        if not (scheme.startswith("postgresql://") or scheme.startswith("postgres://")):
-            raise RuntimeError(
-                "DATABASE is 'postgres' but DATABASE_URL is not a PostgreSQL URL. "
-                "Expected DATABASE_URL starting with postgresql:// or postgres://."
-            )
-        return "postgres"
-
-    # SQLite backend (backend == "sqlite")
-    if db_url:
-        scheme = db_url.lower()
-        if scheme.startswith("sqlite://"):
-            return "sqlite"
-        if scheme.startswith("postgresql://") or scheme.startswith("postgres://"):
-            raise RuntimeError(
-                "DATABASE_URL is a PostgreSQL URL but DATABASE is not set to 'postgres'. "
-                "Either set DATABASE=postgres or change DATABASE_URL to a sqlite:// URL."
-            )
-        raise RuntimeError(
-            "Unsupported DATABASE_URL scheme. Only postgresql://, postgres:// and sqlite:// are supported."
-        )
-
-    # Default: SQLite with local file
-    return "sqlite"
-
-
-def is_postgres_backend() -> bool:
-    """Whether PostgreSQL is configured as the active backend."""
-    return get_db_backend() == "postgres"
 
 
 @contextmanager
 def get_db_connection(db_path: Optional[str] = None):
-    """Yield a database connection for the active backend.
+    """Yield a SQLAlchemy database session.
 
-    For SQLite, ``DATABASE_URL`` (sqlite URL) or ``db_path`` (or the default database path) is used and
-    foreign key support is enabled. For PostgreSQL, a connection is
-    created via :func:`get_postgres_connection`.
+    When ``db_path`` is provided:
+      * If it contains ``"://"``, it is treated as a full SQLAlchemy URL.
+      * Otherwise it is treated as a SQLite filesystem path and converted to
+        a ``sqlite:///`` URL with foreign key support enabled.
+
+    When ``db_path`` is not provided, the global engine / session factory is
+    used, based on ``DATABASE`` / ``DATABASE_URL`` environment variables.
     """
-    if is_postgres_backend():
-        conn = get_postgres_connection()
-    else:
-        db_url = os.getenv("DATABASE_URL")
-        if db_url and db_url.lower().startswith("sqlite://"):
-            lower_url = db_url.lower()
-            if lower_url.startswith("sqlite:///"):
-                path = db_url[len("sqlite:///") :]
-            else:
-                path = db_url.split("://", 1)[1]
-        else:
-            path = db_path or get_database_path()
+    engine_to_dispose = None
+    
+    if db_path:
+        if "://" in db_path:
+            if db_path.lower().startswith("sqlite://"):
+                engine = create_engine(
+                    db_path,
+                    echo=False,
+                    connect_args={"check_same_thread": False},
+                    poolclass=StaticPool,
+                )
 
-        conn = sqlite3.connect(path)
-        conn.execute("PRAGMA foreign_keys = ON")
+                @event.listens_for(engine, "connect")
+                def set_sqlite_pragma(dbapi_conn, connection_record):
+                    cursor = dbapi_conn.cursor()
+                    cursor.execute("PRAGMA foreign_keys=ON")
+                    cursor.close()
+            else:
+                engine = create_engine(db_path, echo=False, pool_pre_ping=True)
+        else:
+            abs_path = os.path.abspath(db_path)
+            database_url = f"sqlite:///{abs_path}"
+            engine = create_engine(
+                database_url,
+                echo=False,
+                connect_args={"check_same_thread": False},
+                poolclass=StaticPool,
+            )
+
+            @event.listens_for(engine, "connect")
+            def set_sqlite_pragma(dbapi_conn, connection_record):
+                cursor = dbapi_conn.cursor()
+                cursor.execute("PRAGMA foreign_keys=ON")
+                cursor.close()
+
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        session = SessionLocal()
+        engine_to_dispose = engine
+    else:
+        SessionLocal = _get_session_factory()
+        session = SessionLocal()
+    
     try:
-        yield conn
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     finally:
-        conn.close()
+        session.close()
+        if engine_to_dispose is not None:
+            engine_to_dispose.dispose()
+
+
+def init_db():
+    """Initialize database tables defined in agentgit.database.models."""
+    engine = _get_engine()
+    Base.metadata.create_all(bind=engine)

@@ -1,31 +1,25 @@
-"""User repository for database operations.
+"""User repository for database operations using SQLAlchemy ORM.
 
-Provides ORM functionality for User entities with SQLite backend.
+Provides ORM functionality for User entities.
 """
 
-import sqlite3
-import json
 from typing import Optional, List
-from datetime import datetime
-from pathlib import Path
+from datetime import datetime, timezone
 
 from agentgit.auth.user import User
-from agentgit.database.db_config import (
-    get_database_path,
-    get_db_connection,
-    is_postgres_backend,
-)
+from agentgit.database.db_config import get_database_path, get_db_connection
+from agentgit.database.models import User as UserModel
 
 
 class UserRepository:
-    """Repository for User CRUD operations with SQLite.
+    """Repository for User CRUD operations with SQLAlchemy ORM.
 
     This class handles all database operations for User entities,
     including automatic initialization of the database schema and
     creation of the default admin user (rootusr).
 
     Attributes:
-        db_path: Path to the SQLite database file.
+        db_path: Path to the database file or connection string.
 
     Example:
         >>> repo = UserRepository()
@@ -40,12 +34,9 @@ class UserRepository:
         """Initialize the user repository.
 
         Args:
-            db_path: Path to SQLite database file. If None, uses configured default.
+            db_path: Path to database file. If None, uses configured default.
         """
         self.db_path = db_path or get_database_path()
-        # Cache backend and parameter style for this repository instance
-        self._backend = "postgres" if is_postgres_backend() else "sqlite"
-        self._param = "%s" if self._backend == "postgres" else "?"
         self._init_db()
 
     def _init_db(self):
@@ -53,79 +44,24 @@ class UserRepository:
 
         Creates the users table if it doesn't exist and ensures
         the rootusr admin account is present with default password "1234".
-        Also handles migration for new fields.
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            if self._backend == "postgres":
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS users (
-                        id SERIAL PRIMARY KEY,
-                        username TEXT UNIQUE NOT NULL,
-                        password_hash TEXT NOT NULL,
-                        is_admin INTEGER DEFAULT 0,
-                        created_at TEXT,
-                        last_login TEXT,
-                        data TEXT,
-                        api_key TEXT,
-                        session_limit INTEGER DEFAULT 5
-                    )
-                    """
-                )
-                cursor.execute(
-                    """
-                    SELECT column_name
-                    FROM information_schema.columns
-                    WHERE table_name = 'users'
-                    """
-                )
-                columns = [row[0] for row in cursor.fetchall()]
-            else:
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS users (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        username TEXT UNIQUE NOT NULL,
-                        password_hash TEXT NOT NULL,
-                        is_admin INTEGER DEFAULT 0,
-                        created_at TEXT,
-                        last_login TEXT,
-                        data TEXT,
-                        api_key TEXT,
-                        session_limit INTEGER DEFAULT 5
-                    )
-                    """
-                )
-                cursor.execute("PRAGMA table_info(users)")
-                columns = [column[1] for column in cursor.fetchall()]
-
-            if "api_key" not in columns:
-                cursor.execute("ALTER TABLE users ADD COLUMN api_key TEXT")
-
-            if "session_limit" not in columns:
-                cursor.execute(
-                    "ALTER TABLE users ADD COLUMN session_limit INTEGER DEFAULT 5"
-                )
-
-            conn.commit()
-
-            cursor.execute(
-                """
-                SELECT COUNT(*) FROM users WHERE username = 'rootusr'
-                """
-            )
-
-            if cursor.fetchone()[0] == 0:
+        from agentgit.database.models import Base
+        
+        # Initialize tables using the same connection that will be used
+        with get_db_connection(self.db_path) as session:
+            # Create all tables in this database
+            Base.metadata.create_all(bind=session.bind)
+            
+            # Check for default admin user
+            existing_root = session.query(UserModel).filter_by(username="rootusr").first()
+            
+            if not existing_root:
                 root_user = User(
                     username="rootusr",
                     is_admin=True,
-                    created_at=datetime.now(),
                 )
                 root_user.set_password("1234")
                 self.save(root_user)
-
-            conn.commit()
 
     def save(self, user: User) -> User:
         """Save or update a user in the database.
@@ -144,91 +80,37 @@ class UserRepository:
         """
         user_dict = user.to_dict()
         user_dict['password_hash'] = user.password_hash
-        json_data = json.dumps(user_dict)
 
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
+        with get_db_connection(self.db_path) as session:
             if user.id is None:
-                if self._backend == "postgres":
-                    cursor.execute(
-                        """
-                        INSERT INTO users (username, password_hash, is_admin, created_at, last_login, data, api_key, session_limit)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        RETURNING id
-                        """,
-                        (
-                            user.username,
-                            user.password_hash,
-                            1 if user.is_admin else 0,
-                            user.created_at.isoformat() if user.created_at else None,
-                            user.last_login.isoformat() if user.last_login else None,
-                            json_data,
-                            user.api_key,
-                            user.session_limit,
-                        ),
-                    )
-                    user.id = cursor.fetchone()[0]
-                else:
-                    cursor.execute(
-                        """
-                        INSERT INTO users (username, password_hash, is_admin, created_at, last_login, data, api_key, session_limit)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            user.username,
-                            user.password_hash,
-                            1 if user.is_admin else 0,
-                            user.created_at.isoformat() if user.created_at else None,
-                            user.last_login.isoformat() if user.last_login else None,
-                            json_data,
-                            user.api_key,
-                            user.session_limit,
-                        ),
-                    )
-                    user.id = cursor.lastrowid
+                # Create new user
+                db_user = UserModel(
+                    username=user.username,
+                    password_hash=user.password_hash,
+                    is_admin=user.is_admin,
+                    last_login=user.last_login,
+                    data=user_dict,
+                    api_key=user.api_key,
+                    session_limit=user.session_limit,
+                )
+                # created_at is auto-generated by server_default
+                session.add(db_user)
+                session.flush()
+                user.id = db_user.id
+                # Update user.created_at from database
+                if db_user.created_at:
+                    user.created_at = db_user.created_at
             else:
-                if self._backend == "postgres":
-                    cursor.execute(
-                        """
-                        UPDATE users 
-                        SET username = %s, password_hash = %s, is_admin = %s, 
-                            created_at = %s, last_login = %s, data = %s, api_key = %s, session_limit = %s
-                        WHERE id = %s
-                        """,
-                        (
-                            user.username,
-                            user.password_hash,
-                            1 if user.is_admin else 0,
-                            user.created_at.isoformat() if user.created_at else None,
-                            user.last_login.isoformat() if user.last_login else None,
-                            json_data,
-                            user.api_key,
-                            user.session_limit,
-                            user.id,
-                        ),
-                    )
-                else:
-                    cursor.execute(
-                        """
-                        UPDATE users 
-                        SET username = ?, password_hash = ?, is_admin = ?, 
-                            created_at = ?, last_login = ?, data = ?, api_key = ?, session_limit = ?
-                        WHERE id = ?
-                        """,
-                        (
-                            user.username,
-                            user.password_hash,
-                            1 if user.is_admin else 0,
-                            user.created_at.isoformat() if user.created_at else None,
-                            user.last_login.isoformat() if user.last_login else None,
-                            json_data,
-                            user.api_key,
-                            user.session_limit,
-                            user.id,
-                        ),
-                    )
-
-            conn.commit()
+                # Update existing user
+                db_user = session.query(UserModel).filter_by(id=user.id).first()
+                if db_user:
+                    db_user.username = user.username
+                    db_user.password_hash = user.password_hash
+                    db_user.is_admin = user.is_admin
+                    db_user.last_login = user.last_login
+                    db_user.data = user_dict
+                    db_user.api_key = user.api_key
+                    db_user.session_limit = user.session_limit
 
         return user
 
@@ -241,29 +123,10 @@ class UserRepository:
         Returns:
             User object if found, None otherwise.
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            if self._backend == "postgres":
-                cursor.execute(
-                    """
-                    SELECT id, username, password_hash, is_admin, created_at, last_login, data, api_key, session_limit
-                    FROM users WHERE id = %s
-                    """,
-                    (user_id,),
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT id, username, password_hash, is_admin, created_at, last_login, data, api_key, session_limit
-                    FROM users WHERE id = ?
-                    """,
-                    (user_id,),
-                )
-
-            row = cursor.fetchone()
-            if row:
-                return self._row_to_user(row)
-
+        with get_db_connection(self.db_path) as session:
+            db_user = session.query(UserModel).filter_by(id=user_id).first()
+            if db_user:
+                return self._row_to_user(db_user)
         return None
 
     def find_by_username(self, username: str) -> Optional[User]:
@@ -275,29 +138,10 @@ class UserRepository:
         Returns:
             User object if found, None otherwise.
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            if self._backend == "postgres":
-                cursor.execute(
-                    """
-                    SELECT id, username, password_hash, is_admin, created_at, last_login, data, api_key, session_limit
-                    FROM users WHERE username = %s
-                    """,
-                    (username,),
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT id, username, password_hash, is_admin, created_at, last_login, data, api_key, session_limit
-                    FROM users WHERE username = ?
-                    """,
-                    (username,),
-                )
-
-            row = cursor.fetchone()
-            if row:
-                return self._row_to_user(row)
-
+        with get_db_connection(self.db_path) as session:
+            db_user = session.query(UserModel).filter_by(username=username).first()
+            if db_user:
+                return self._row_to_user(db_user)
         return None
 
     def find_all(self) -> List[User]:
@@ -306,16 +150,9 @@ class UserRepository:
         Returns:
             List of all User objects in the database.
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT id, username, password_hash, is_admin, created_at, last_login, data, api_key, session_limit
-                FROM users
-                """
-            )
-            rows = cursor.fetchall()
-            return [self._row_to_user(row) for row in rows]
+        with get_db_connection(self.db_path) as session:
+            db_users = session.query(UserModel).all()
+            return [self._row_to_user(db_user) for db_user in db_users]
 
     def find_by_api_key(self, api_key: str) -> Optional[User]:
         """Find a user by their API key.
@@ -326,29 +163,10 @@ class UserRepository:
         Returns:
             User object if found, None otherwise.
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            if self._backend == "postgres":
-                cursor.execute(
-                    """
-                    SELECT id, username, password_hash, is_admin, created_at, last_login, data, api_key, session_limit
-                    FROM users WHERE api_key = %s
-                    """,
-                    (api_key,),
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT id, username, password_hash, is_admin, created_at, last_login, data, api_key, session_limit
-                    FROM users WHERE api_key = ?
-                    """,
-                    (api_key,),
-                )
-
-            row = cursor.fetchone()
-            if row:
-                return self._row_to_user(row)
-
+        with get_db_connection(self.db_path) as session:
+            db_user = session.query(UserModel).filter_by(api_key=api_key).first()
+            if db_user:
+                return self._row_to_user(db_user)
         return None
 
     def update_last_login(self, user_id: int) -> bool:
@@ -360,25 +178,12 @@ class UserRepository:
         Returns:
             True if updated successfully, False otherwise.
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            now = datetime.now().isoformat()
-            if self._backend == "postgres":
-                cursor.execute(
-                    """
-                    UPDATE users SET last_login = %s WHERE id = %s
-                    """,
-                    (now, user_id),
-                )
-            else:
-                cursor.execute(
-                    """
-                    UPDATE users SET last_login = ? WHERE id = ?
-                    """,
-                    (now, user_id),
-                )
-            conn.commit()
-            return cursor.rowcount > 0
+        with get_db_connection(self.db_path) as session:
+            db_user = session.query(UserModel).filter_by(id=user_id).first()
+            if db_user:
+                db_user.last_login = datetime.now(timezone.utc)
+                return True
+            return False
 
     def update_api_key(self, user_id: int, api_key: Optional[str]) -> bool:
         """Update or remove a user's API key.
@@ -390,24 +195,12 @@ class UserRepository:
         Returns:
             True if updated successfully, False otherwise.
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            if self._backend == "postgres":
-                cursor.execute(
-                    """
-                    UPDATE users SET api_key = %s WHERE id = %s
-                    """,
-                    (api_key, user_id),
-                )
-            else:
-                cursor.execute(
-                    """
-                    UPDATE users SET api_key = ? WHERE id = ?
-                    """,
-                    (api_key, user_id),
-                )
-            conn.commit()
-            return cursor.rowcount > 0
+        with get_db_connection(self.db_path) as session:
+            db_user = session.query(UserModel).filter_by(id=user_id).first()
+            if db_user:
+                db_user.api_key = api_key
+                return True
+            return False
 
     def get_user_sessions(self, user_id: int) -> List[int]:
         """Get all active session IDs for a user.
@@ -486,55 +279,45 @@ class UserRepository:
         Returns:
             True if a user was deleted, False if no user found.
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            if self._backend == "postgres":
-                cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
-            else:
-                cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+        with get_db_connection(self.db_path) as session:
+            db_user = session.query(UserModel).filter_by(id=user_id).first()
+            if db_user:
+                session.delete(db_user)
+                return True
+            return False
 
-    def _row_to_user(self, row) -> User:
-        """Convert a database row to a User object.
+    def _row_to_user(self, db_user: UserModel) -> User:
+        """Convert a database model to a User object.
 
         Args:
-            row: Tuple containing database fields (id, username, password_hash,
-                 is_admin, created_at, last_login, json_data, api_key, session_limit).
+            db_user: UserModel instance from database.
             
         Returns:
             User object reconstructed from database data.
             
         Note:
-            Prioritizes JSON data if available, falls back to individual fields.
+            Database columns always override JSON data for datetime fields.
         """
-        user_id, username, password_hash, is_admin, created_at, last_login, json_data, api_key, session_limit = row
-        
-        if json_data:
-            user_dict = json.loads(json_data)
-            # Ensure api_key and session_limit from columns override JSON data
-            # This handles migration cases where JSON might not have these fields
-            if api_key is not None:
-                user_dict["api_key"] = api_key
-            if session_limit is not None:
-                user_dict["session_limit"] = session_limit
+        if db_user.data and isinstance(db_user.data, dict):
+            user_dict = db_user.data.copy()
         else:
             user_dict = {
-                "id": user_id,
-                "username": username,
-                "is_admin": bool(is_admin),
-                "created_at": created_at,
-                "last_login": last_login,
-                "api_key": api_key,
-                "session_limit": session_limit or 5,
+                "id": db_user.id,
+                "username": db_user.username,
+                "is_admin": db_user.is_admin,
                 "active_sessions": [],
                 "preferences": {},
                 "metadata": {}
             }
         
-        user_dict["password_hash"] = password_hash
+        # Always use database column values, and override any values from JSON data
+        user_dict["created_at"] = db_user.created_at.isoformat() if db_user.created_at else None
+        user_dict["last_login"] = db_user.last_login.isoformat() if db_user.last_login else None
+        user_dict["api_key"] = db_user.api_key
+        user_dict["session_limit"] = db_user.session_limit or 5
+        user_dict["password_hash"] = db_user.password_hash
         
         user = User.from_dict(user_dict)
-        user.id = user_id
+        user.id = db_user.id
         
         return user

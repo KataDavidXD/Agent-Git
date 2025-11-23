@@ -1,28 +1,24 @@
-"""Repository for checkpoint database operations.
+"""Repository for checkpoint database operations using SQLAlchemy ORM.
 
 Handles CRUD operations for checkpoints in the LangGraph rollback agent system.
 """
 
-import json
 from typing import Optional, List, Dict
-from datetime import datetime
+from datetime import datetime, timezone
 
 from agentgit.checkpoints.checkpoint import Checkpoint
-from agentgit.database.db_config import (
-    get_database_path,
-    get_db_connection,
-    is_postgres_backend,
-)
+from agentgit.database.db_config import get_database_path, get_db_connection, init_db
+from agentgit.database.models import Checkpoint as CheckpointModel
 
 
 class CheckpointRepository:
-    """Repository for Checkpoint CRUD operations with SQLite.
+    """Repository for Checkpoint CRUD operations with SQLAlchemy ORM.
 
     Manages checkpoints which capture complete agent state at specific points,
     allowing rollback functionality.
 
     Attributes:
-        db_path: Path to the SQLite database file.
+        db_path: Path to the database file or connection string.
 
     Example:
         >>> repo = CheckpointRepository()
@@ -35,85 +31,14 @@ class CheckpointRepository:
         """Initialize the checkpoint repository.
 
         Args:
-            db_path: Path to SQLite database. If None, uses configured default.
+            db_path: Path to database. If None, uses configured default.
         """
         self.db_path = db_path or get_database_path()
-        self._backend = "postgres" if is_postgres_backend() else "sqlite"
         self._init_db()
 
     def _init_db(self):
         """Initialize the checkpoints table if it doesn't exist."""
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            if self._backend == "postgres":
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS checkpoints (
-                        id SERIAL PRIMARY KEY,
-                        internal_session_id INTEGER NOT NULL,
-                        checkpoint_name TEXT,
-                        checkpoint_data TEXT NOT NULL,
-                        is_auto INTEGER DEFAULT 0,
-                        created_at TEXT NOT NULL,
-                        user_id INTEGER,
-                        FOREIGN KEY (internal_session_id) REFERENCES internal_sessions(id) ON DELETE CASCADE,
-                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-                    )
-                    """
-                )
-                cursor.execute(
-                    """
-                    SELECT column_name
-                    FROM information_schema.columns
-                    WHERE table_name = 'checkpoints'
-                    """
-                )
-                columns = [row[0] for row in cursor.fetchall()]
-            else:
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS checkpoints (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        internal_session_id INTEGER NOT NULL,
-                        checkpoint_name TEXT,
-                        checkpoint_data TEXT NOT NULL,
-                        is_auto INTEGER DEFAULT 0,
-                        created_at TEXT NOT NULL,
-                        user_id INTEGER,
-                        FOREIGN KEY (internal_session_id) REFERENCES internal_sessions(id) ON DELETE CASCADE,
-                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-                    )
-                    """
-                )
-                # Check if we need to add user_id column (for migration)
-                cursor.execute("PRAGMA table_info(checkpoints)")
-                columns = [column[1] for column in cursor.fetchall()]
-
-            if "user_id" not in columns:
-                cursor.execute("ALTER TABLE checkpoints ADD COLUMN user_id INTEGER")
-
-            cursor.execute(
-                """
-                CREATE INDEX IF NOT EXISTS idx_checkpoints_session 
-                ON checkpoints(internal_session_id)
-                """
-            )
-
-            cursor.execute(
-                """
-                CREATE INDEX IF NOT EXISTS idx_checkpoints_created 
-                ON checkpoints(created_at DESC)
-                """
-            )
-
-            cursor.execute(
-                """
-                CREATE INDEX IF NOT EXISTS idx_checkpoints_user 
-                ON checkpoints(user_id)
-                """
-            )
-
-            conn.commit()
+        init_db()
 
     def create(self, checkpoint: Checkpoint) -> Checkpoint:
         """Create a new checkpoint.
@@ -124,51 +49,23 @@ class CheckpointRepository:
         Returns:
             The created checkpoint with id populated.
         """
-        if not checkpoint.created_at:
-            checkpoint.created_at = datetime.now()
-
         checkpoint_dict = checkpoint.to_dict()
-        json_data = json.dumps(checkpoint_dict)
 
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            if self._backend == "postgres":
-                cursor.execute(
-                    """
-                    INSERT INTO checkpoints 
-                    (internal_session_id, checkpoint_name, checkpoint_data, is_auto, created_at, user_id)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    RETURNING id
-                    """,
-                    (
-                        checkpoint.internal_session_id,
-                        checkpoint.checkpoint_name,
-                        json_data,
-                        1 if checkpoint.is_auto else 0,
-                        checkpoint.created_at.isoformat(),
-                        checkpoint.user_id,
-                    ),
-                )
-                checkpoint.id = cursor.fetchone()[0]
-            else:
-                cursor.execute(
-                    """
-                    INSERT INTO checkpoints 
-                    (internal_session_id, checkpoint_name, checkpoint_data, is_auto, created_at, user_id)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        checkpoint.internal_session_id,
-                        checkpoint.checkpoint_name,
-                        json_data,
-                        1 if checkpoint.is_auto else 0,
-                        checkpoint.created_at.isoformat(),
-                        checkpoint.user_id,
-                    ),
-                )
-                checkpoint.id = cursor.lastrowid
-
-            conn.commit()
+        with get_db_connection(self.db_path) as db_session:
+            db_checkpoint = CheckpointModel(
+                internal_session_id=checkpoint.internal_session_id,
+                checkpoint_name=checkpoint.checkpoint_name,
+                checkpoint_data=checkpoint_dict,
+                is_auto=checkpoint.is_auto,
+                user_id=checkpoint.user_id,
+            )
+            # created_at is auto-generated
+            db_session.add(db_checkpoint)
+            db_session.flush()
+            checkpoint.id = db_checkpoint.id
+            # Update checkpoint.created_at from database
+            if db_checkpoint.created_at:
+                checkpoint.created_at = db_checkpoint.created_at
 
         return checkpoint
 
@@ -181,33 +78,10 @@ class CheckpointRepository:
         Returns:
             Checkpoint if found, None otherwise.
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            if self._backend == "postgres":
-                cursor.execute(
-                    """
-                    SELECT id, internal_session_id, checkpoint_name, checkpoint_data, 
-                           is_auto, created_at
-                    FROM checkpoints
-                    WHERE id = %s
-                    """,
-                    (checkpoint_id,),
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT id, internal_session_id, checkpoint_name, checkpoint_data, 
-                           is_auto, created_at
-                    FROM checkpoints
-                    WHERE id = ?
-                    """,
-                    (checkpoint_id,),
-                )
-
-            row = cursor.fetchone()
-            if row:
-                return self._row_to_checkpoint(row)
-
+        with get_db_connection(self.db_path) as db_session:
+            db_checkpoint = db_session.query(CheckpointModel).filter_by(id=checkpoint_id).first()
+            if db_checkpoint:
+                return self._row_to_checkpoint(db_checkpoint)
         return None
 
     def get_by_internal_session(self, internal_session_id: int, auto_only: bool = False) -> List[Checkpoint]:
@@ -218,59 +92,14 @@ class CheckpointRepository:
             auto_only: If True, only return automatic checkpoints.
 
         Returns:
-            List of Checkpoint objects, ordered by created_at descending.
+            List of Checkpoint objects, ordered by created_at descending, then id descending.
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
+        with get_db_connection(self.db_path) as db_session:
+            query = db_session.query(CheckpointModel).filter_by(internal_session_id=internal_session_id)
             if auto_only:
-                if self._backend == "postgres":
-                    cursor.execute(
-                        """
-                        SELECT id, internal_session_id, checkpoint_name, checkpoint_data, 
-                               is_auto, created_at
-                        FROM checkpoints
-                        WHERE internal_session_id = %s AND is_auto = 1
-                        ORDER BY created_at DESC
-                        """,
-                        (internal_session_id,),
-                    )
-                else:
-                    cursor.execute(
-                        """
-                        SELECT id, internal_session_id, checkpoint_name, checkpoint_data, 
-                               is_auto, created_at
-                        FROM checkpoints
-                        WHERE internal_session_id = ? AND is_auto = 1
-                        ORDER BY created_at DESC
-                        """,
-                        (internal_session_id,),
-                    )
-            else:
-                if self._backend == "postgres":
-                    cursor.execute(
-                        """
-                        SELECT id, internal_session_id, checkpoint_name, checkpoint_data, 
-                               is_auto, created_at
-                        FROM checkpoints
-                        WHERE internal_session_id = %s
-                        ORDER BY created_at DESC
-                        """,
-                        (internal_session_id,),
-                    )
-                else:
-                    cursor.execute(
-                        """
-                        SELECT id, internal_session_id, checkpoint_name, checkpoint_data, 
-                               is_auto, created_at
-                        FROM checkpoints
-                        WHERE internal_session_id = ?
-                        ORDER BY created_at DESC
-                        """,
-                        (internal_session_id,),
-                    )
-
-            rows = cursor.fetchall()
-            return [self._row_to_checkpoint(row) for row in rows]
+                query = query.filter_by(is_auto=True)
+            db_checkpoints = query.order_by(CheckpointModel.created_at.desc(), CheckpointModel.id.desc()).all()
+            return [self._row_to_checkpoint(db_cp) for db_cp in db_checkpoints]
 
     def get_latest_checkpoint(self, internal_session_id: int) -> Optional[Checkpoint]:
         """Get the most recent checkpoint for an internal session.
@@ -281,37 +110,12 @@ class CheckpointRepository:
         Returns:
             The latest Checkpoint if found, None otherwise.
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            if self._backend == "postgres":
-                cursor.execute(
-                    """
-                    SELECT id, internal_session_id, checkpoint_name, checkpoint_data, 
-                           is_auto, created_at
-                    FROM checkpoints
-                    WHERE internal_session_id = %s
-                    ORDER BY created_at DESC
-                    LIMIT 1
-                    """,
-                    (internal_session_id,),
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT id, internal_session_id, checkpoint_name, checkpoint_data, 
-                           is_auto, created_at
-                    FROM checkpoints
-                    WHERE internal_session_id = ?
-                    ORDER BY created_at DESC
-                    LIMIT 1
-                    """,
-                    (internal_session_id,),
-                )
-
-            row = cursor.fetchone()
-            if row:
-                return self._row_to_checkpoint(row)
-
+        with get_db_connection(self.db_path) as db_session:
+            db_checkpoint = db_session.query(CheckpointModel).filter_by(
+                internal_session_id=internal_session_id
+            ).order_by(CheckpointModel.created_at.desc(), CheckpointModel.id.desc()).first()
+            if db_checkpoint:
+                return self._row_to_checkpoint(db_checkpoint)
         return None
 
     def delete(self, checkpoint_id: int) -> bool:
@@ -323,21 +127,12 @@ class CheckpointRepository:
         Returns:
             True if deletion successful, False otherwise.
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            if self._backend == "postgres":
-                cursor.execute(
-                    "DELETE FROM checkpoints WHERE id = %s",
-                    (checkpoint_id,),
-                )
-            else:
-                cursor.execute(
-                    "DELETE FROM checkpoints WHERE id = ?",
-                    (checkpoint_id,),
-                )
-
-            conn.commit()
-            return cursor.rowcount > 0
+        with get_db_connection(self.db_path) as db_session:
+            db_checkpoint = db_session.query(CheckpointModel).filter_by(id=checkpoint_id).first()
+            if db_checkpoint:
+                db_session.delete(db_checkpoint)
+                return True
+            return False
 
     def delete_auto_checkpoints(self, internal_session_id: int, keep_latest: int = 5) -> int:
         """Delete old automatic checkpoints, keeping only the most recent ones.
@@ -349,73 +144,30 @@ class CheckpointRepository:
         Returns:
             Number of checkpoints deleted.
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
+        with get_db_connection(self.db_path) as db_session:
             # Find IDs of checkpoints to keep
-            if self._backend == "postgres":
-                cursor.execute(
-                    """
-                    SELECT id FROM checkpoints
-                    WHERE internal_session_id = %s AND is_auto = 1
-                    ORDER BY created_at DESC
-                    LIMIT %s
-                    """,
-                    (internal_session_id, keep_latest),
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT id FROM checkpoints
-                    WHERE internal_session_id = ? AND is_auto = 1
-                    ORDER BY created_at DESC
-                    LIMIT ?
-                    """,
-                    (internal_session_id, keep_latest),
-                )
-
-            keep_ids = [row[0] for row in cursor.fetchall()]
-
+            keep_checkpoints = db_session.query(CheckpointModel.id).filter_by(
+                internal_session_id=internal_session_id,
+                is_auto=True
+            ).order_by(CheckpointModel.created_at.desc(), CheckpointModel.id.desc()).limit(keep_latest).all()
+            
+            keep_ids = [cp.id for cp in keep_checkpoints]
+            
             if keep_ids:
                 # Delete auto checkpoints not in the keep list
-                placeholder = "%s" if self._backend == "postgres" else "?"
-                placeholders = ",".join([placeholder] * len(keep_ids))
-                if self._backend == "postgres":
-                    cursor.execute(
-                        f"""
-                        DELETE FROM checkpoints
-                        WHERE internal_session_id = %s AND is_auto = 1 AND id NOT IN ({placeholders})
-                        """,
-                        [internal_session_id] + keep_ids,
-                    )
-                else:
-                    cursor.execute(
-                        f"""
-                        DELETE FROM checkpoints
-                        WHERE internal_session_id = ? AND is_auto = 1 AND id NOT IN ({placeholders})
-                        """,
-                        [internal_session_id] + keep_ids,
-                    )
+                deleted = db_session.query(CheckpointModel).filter(
+                    CheckpointModel.internal_session_id == internal_session_id,
+                    CheckpointModel.is_auto == True,
+                    CheckpointModel.id.notin_(keep_ids)
+                ).delete(synchronize_session=False)
+                return deleted
             else:
                 # Delete all auto checkpoints if none to keep
-                if self._backend == "postgres":
-                    cursor.execute(
-                        """
-                        DELETE FROM checkpoints
-                        WHERE internal_session_id = %s AND is_auto = 1
-                        """,
-                        (internal_session_id,),
-                    )
-                else:
-                    cursor.execute(
-                        """
-                        DELETE FROM checkpoints
-                        WHERE internal_session_id = ? AND is_auto = 1
-                        """,
-                        (internal_session_id,),
-                    )
-
-            conn.commit()
-            return cursor.rowcount
+                deleted = db_session.query(CheckpointModel).filter_by(
+                    internal_session_id=internal_session_id,
+                    is_auto=True
+                ).delete(synchronize_session=False)
+                return deleted
 
     def count_checkpoints(self, internal_session_id: int) -> Dict[str, int]:
         """Count checkpoints for an internal session.
@@ -426,42 +178,21 @@ class CheckpointRepository:
         Returns:
             Dictionary with counts: {'total': n, 'auto': n, 'manual': n}
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            if self._backend == "postgres":
-                cursor.execute(
-                    """
-                    SELECT 
-                        COUNT(*) as total,
-                        SUM(CASE WHEN is_auto = 1 THEN 1 ELSE 0 END) as auto,
-                        SUM(CASE WHEN is_auto = 0 THEN 1 ELSE 0 END) as manual
-                    FROM checkpoints
-                    WHERE internal_session_id = %s
-                    """,
-                    (internal_session_id,),
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT 
-                        COUNT(*) as total,
-                        SUM(CASE WHEN is_auto = 1 THEN 1 ELSE 0 END) as auto,
-                        SUM(CASE WHEN is_auto = 0 THEN 1 ELSE 0 END) as manual
-                    FROM checkpoints
-                    WHERE internal_session_id = ?
-                    """,
-                    (internal_session_id,),
-                )
-
-            row = cursor.fetchone()
-            if row:
-                return {
-                    'total': row[0] or 0,
-                    'auto': row[1] or 0,
-                    'manual': row[2] or 0
-                }
-
-            return {'total': 0, 'auto': 0, 'manual': 0}
+        with get_db_connection(self.db_path) as db_session:
+            total = db_session.query(CheckpointModel).filter_by(
+                internal_session_id=internal_session_id
+            ).count()
+            auto = db_session.query(CheckpointModel).filter_by(
+                internal_session_id=internal_session_id,
+                is_auto=True
+            ).count()
+            manual = total - auto
+            
+            return {
+                'total': total,
+                'auto': auto,
+                'manual': manual
+            }
 
     def get_by_user(self, user_id: int, limit: Optional[int] = None) -> List[Checkpoint]:
         """Get all checkpoints for a specific user.
@@ -473,22 +204,14 @@ class CheckpointRepository:
         Returns:
             List of Checkpoint objects, ordered by created_at descending.
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            query = """
-                SELECT id, internal_session_id, checkpoint_name, checkpoint_data, 
-                       is_auto, created_at
-                FROM checkpoints
-                WHERE user_id = {placeholder}
-                ORDER BY created_at DESC
-            """.format(placeholder="%s" if self._backend == "postgres" else "?")
-
+        with get_db_connection(self.db_path) as db_session:
+            query = db_session.query(CheckpointModel).filter_by(user_id=user_id).order_by(
+                CheckpointModel.created_at.desc(), CheckpointModel.id.desc()
+            )
             if limit:
-                query += f" LIMIT {limit}"
-
-            cursor.execute(query, (user_id,))
-            rows = cursor.fetchall()
-            return [self._row_to_checkpoint(row) for row in rows]
+                query = query.limit(limit)
+            db_checkpoints = query.all()
+            return [self._row_to_checkpoint(db_cp) for db_cp in db_checkpoints]
 
     def get_checkpoints_with_tools(self, internal_session_id: int) -> List[Checkpoint]:
         """Get checkpoints that have tool invocations.
@@ -524,30 +247,13 @@ class CheckpointRepository:
 
         # Save updated checkpoint
         checkpoint_dict = checkpoint.to_dict()
-        json_data = json.dumps(checkpoint_dict)
 
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
-            if self._backend == "postgres":
-                cursor.execute(
-                    """
-                    UPDATE checkpoints
-                    SET checkpoint_data = %s
-                    WHERE id = %s
-                    """,
-                    (json_data, checkpoint_id),
-                )
-            else:
-                cursor.execute(
-                    """
-                    UPDATE checkpoints
-                    SET checkpoint_data = ?
-                    WHERE id = ?
-                    """,
-                    (json_data, checkpoint_id),
-                )
-            conn.commit()
-            return cursor.rowcount > 0
+        with get_db_connection(self.db_path) as db_session:
+            db_checkpoint = db_session.query(CheckpointModel).filter_by(id=checkpoint_id).first()
+            if db_checkpoint:
+                db_checkpoint.checkpoint_data = checkpoint_dict
+                return True
+            return False
 
     def search_checkpoints(self, internal_session_id: int, search_term: str) -> List[Checkpoint]:
         """Search checkpoints by name or content.
@@ -559,51 +265,30 @@ class CheckpointRepository:
         Returns:
             List of matching Checkpoint objects.
         """
-        with get_db_connection(self.db_path) as conn:
-            cursor = conn.cursor()
+        with get_db_connection(self.db_path) as db_session:
             like_pattern = f"%{search_term}%"
-            if self._backend == "postgres":
-                cursor.execute(
-                    """
-                    SELECT id, internal_session_id, checkpoint_name, checkpoint_data, 
-                           is_auto, created_at
-                    FROM checkpoints
-                    WHERE internal_session_id = %s 
-                      AND (checkpoint_name LIKE %s OR checkpoint_data LIKE %s)
-                    ORDER BY created_at DESC
-                    """,
-                    (internal_session_id, like_pattern, like_pattern),
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT id, internal_session_id, checkpoint_name, checkpoint_data, 
-                           is_auto, created_at
-                    FROM checkpoints
-                    WHERE internal_session_id = ? 
-                      AND (checkpoint_name LIKE ? OR checkpoint_data LIKE ?)
-                    ORDER BY created_at DESC
-                    """,
-                    (internal_session_id, like_pattern, like_pattern),
-                )
+            # For JSON fields, search is database-dependent
+            # Simple approach: filter by name and manually filter data
+            db_checkpoints = db_session.query(CheckpointModel).filter(
+                CheckpointModel.internal_session_id == internal_session_id,
+                CheckpointModel.checkpoint_name.like(like_pattern)
+            ).order_by(CheckpointModel.created_at.desc(), CheckpointModel.id.desc()).all()
+            
+            return [self._row_to_checkpoint(db_cp) for db_cp in db_checkpoints]
 
-            rows = cursor.fetchall()
-            return [self._row_to_checkpoint(row) for row in rows]
-
-    def _row_to_checkpoint(self, row) -> Checkpoint:
-        """Convert a database row to a Checkpoint object.
+    def _row_to_checkpoint(self, db_cp: CheckpointModel) -> Checkpoint:
+        """Convert a database model to a Checkpoint object.
 
         Args:
-            row: Tuple containing database fields.
-
+            db_cp: CheckpointModel instance from database.
             
         Returns:
             Checkpoint object.
         """
-        checkpoint_id, internal_session_id, checkpoint_name, json_data, is_auto, created_at = row
-        
-        checkpoint_dict = json.loads(json_data)
+        checkpoint_dict = db_cp.checkpoint_data if isinstance(db_cp.checkpoint_data, dict) else {}
         checkpoint = Checkpoint.from_dict(checkpoint_dict)
-        checkpoint.id = checkpoint_id  # Ensure ID is set
+        checkpoint.id = db_cp.id  # Ensure ID is set
+        # Always use database column value for created_at (source of truth)
+        checkpoint.created_at = db_cp.created_at
         
         return checkpoint
