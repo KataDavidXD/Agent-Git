@@ -11,51 +11,90 @@ from sqlalchemy.pool import StaticPool
 from agentgit.database.models import Base
 
 
-def _create_sqlite_engine(database_url: str):
-    """Create a SQLite engine with foreign key support.
+def _create_db_engine(database_url: str, db_type: str = "sqlite"):
+    """Create a SQLAlchemy engine for any supported database type.
+    
+    Unified engine creation with database-specific configurations.
+    Extensible design: add new database types by adding elif branches.
     
     Args:
-        database_url: SQLite URL (e.g., 'sqlite:///path/to/db.db')
+        database_url: Database connection URL
+        db_type: Database type ('sqlite', 'postgres', 'mysql', etc.)
     
     Returns:
-        SQLAlchemy Engine configured for SQLite
+        Configured SQLAlchemy Engine
+    
+    Raises:
+        ValueError: If database type is not supported
     """
-    engine = create_engine(
-        database_url,
-        echo=False,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+    db_type = db_type.lower()
     
-    @event.listens_for(engine, "connect")
-    def set_sqlite_pragma(dbapi_conn, connection_record):
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
+    if db_type == "sqlite":
+        # SQLite-specific configuration
+        engine = create_engine(
+            database_url,
+            echo=False,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        
+        # Enable foreign key constraints for SQLite
+        @event.listens_for(engine, "connect")
+        def set_sqlite_pragma(dbapi_conn, connection_record):
+            cursor = dbapi_conn.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+        
+        return engine
     
-    return engine
+    elif db_type in ("postgres", "postgresql"):
+        # PostgreSQL-specific configuration
+        return create_engine(
+            database_url,
+            echo=False,
+            pool_pre_ping=True,
+        )
+    
+    # Future database support can be added here:
+    # elif db_type == "mysql":
+    #     return create_engine(
+    #         database_url,
+    #         echo=False,
+    #         pool_recycle=3600,
+    #         pool_pre_ping=True,
+    #     )
+    
+    else:
+        raise ValueError(f"Unsupported database type: {db_type}")
 
 
-def _normalize_db_url(db_path: str) -> tuple[str, bool]:
-    """Normalize a db_path to a SQLAlchemy URL.
+def _normalize_db_url(db_path: str) -> tuple[str, str]:
+    """Normalize a db_path to a SQLAlchemy URL and detect database type.
     
     Args:
         db_path: Either a filesystem path or a SQLAlchemy URL
     
     Returns:
-        Tuple of (url, is_sqlite) where:
+        Tuple of (url, db_type) where:
         - url: SQLAlchemy URL string
-        - is_sqlite: True if the URL is for SQLite
+        - db_type: Database type ('sqlite', 'postgres', 'mysql', etc.)
     """
     if "://" in db_path:
-        # Full URL like postgresql://... or sqlite:///...
-        is_sqlite = db_path.lower().startswith("sqlite://")
-        return db_path, is_sqlite
+        # Full URL - detect database type from scheme
+        url_lower = db_path.lower()
+        if url_lower.startswith("sqlite://"):
+            return db_path, "sqlite"
+        elif url_lower.startswith(("postgresql://", "postgres://")):
+            return db_path, "postgres"
+        # elif url_lower.startswith("mysql://"):
+        #     return db_path, "mysql"
+        else:
+            raise ValueError(f"Unsupported database schema in URL: {db_path!r}.")
     else:
-        # Plain filesystem path -> convert to SQLite URL
+        # Plain filesystem path -> treat as SQLite
         abs_path = os.path.abspath(db_path)
         sqlite_url = f"sqlite:///{abs_path}"
-        return sqlite_url, True
+        return sqlite_url, "sqlite"
 
 
 # Global engine and session factory (singletons)
@@ -74,32 +113,45 @@ def _get_engine():
         db_type = os.getenv("DATABASE", "sqlite").strip().lower()
         path_or_dsn = get_database_path()
         
+        # Use unified engine creation
         if db_type == "postgres":
-            _engine = create_engine(
-                path_or_dsn,
-                echo=False,
-                pool_pre_ping=True,
-            )
+            _engine = _create_db_engine(path_or_dsn, db_type="postgres")
         else:
             sqlite_url = f"sqlite:///{path_or_dsn}"
-            _engine = _create_sqlite_engine(sqlite_url)
+            _engine = _create_db_engine(sqlite_url, db_type="sqlite")
     
     return _engine
 
 
-def _get_session_factory():
-    """Get or create the global session factory (singleton).
+def _get_session_factory(engine=None):
+    """Get or create a session factory.
     
-    Returns a sessionmaker bound to the global engine. This is reused
-    for all connections to the default database (no custom db_path).
+    Unified sessionmaker creation for all scenarios:
+    - If engine is provided: creates a new sessionmaker for that engine (test mode)
+    - If engine is None: returns the global singleton sessionmaker (production mode)
+    
+    Args:
+        engine: Optional SQLAlchemy Engine. If None, uses global engine.
+    
+    Returns:
+        sessionmaker bound to the specified or global engine
     """
-    global _SessionLocal
-    if _SessionLocal is None:
-        engine = _get_engine()
-        _SessionLocal = sessionmaker(
+    if engine is not None:
+        # Test Mode: Create new sessionmaker for provided engine
+        return sessionmaker(
             autocommit=False,
             autoflush=False,
             bind=engine
+        )
+    
+    # Production Mode: Return global singleton sessionmaker
+    global _SessionLocal
+    if _SessionLocal is None:
+        global_engine = _get_engine()
+        _SessionLocal = sessionmaker(
+            autocommit=False,
+            autoflush=False,
+            bind=global_engine
         )
     return _SessionLocal
 
@@ -168,22 +220,14 @@ def get_db_connection(db_path: Optional[str] = None):
     """
     engine_to_dispose = None
     
-    # Test Mode
     if db_path:
-        # Create a custom engine and sessionmaker for this specific db_path
-        url, is_sqlite = _normalize_db_url(db_path)
-        
-        if is_sqlite:
-            engine = _create_sqlite_engine(url)
-        else:
-            engine = create_engine(url, echo=False, pool_pre_ping=True)
-        
-        # Create temporary sessionmaker for custom engine
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        # Test Mode: Create temporary engine and sessionmaker for custom db_path
+        url, db_type = _normalize_db_url(db_path)
+        engine = _create_db_engine(url, db_type)
+        SessionLocal = _get_session_factory(engine)
         engine_to_dispose = engine
-    # Production Mode
     else:
-        # Reuse global sessionmaker (performance optimization)
+        # Production Mode: Reuse global sessionmaker (performance optimization)
         SessionLocal = _get_session_factory()
     
     session = SessionLocal()
@@ -196,7 +240,7 @@ def get_db_connection(db_path: Optional[str] = None):
         raise
     finally:
         session.close()
-        # Be destroyed when it is in test mode.
+        # Dispose engine when in test mode
         if engine_to_dispose is not None:
             engine_to_dispose.dispose()
 

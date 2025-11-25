@@ -104,12 +104,20 @@ def test_internal_session_repository_branching(sqlite_repo_env):
     assert repo.get_by_id(root.id).langgraph_session_id == "lg-root"
     assert repo.get_current_session(external.id).id == root.id
 
-    # Branch session referencing the root
+    # Create a checkpoint to reference in the branch
+    cp_repo = CheckpointRepository()
+    checkpoint = cp_repo.create(Checkpoint(
+        internal_session_id=root.id,
+        checkpoint_name="Branch Point",
+        user_id=user_id,
+    ))
+
+    # Branch session referencing the root and a real checkpoint
     branch = InternalSession(
         external_session_id=external.id,
         langgraph_session_id="lg-branch",
         parent_session_id=root.id,
-        branch_point_checkpoint_id=42,
+        branch_point_checkpoint_id=checkpoint.id,
         is_current=False,
     )
     child = repo.create(branch)

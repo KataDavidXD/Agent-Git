@@ -6,6 +6,8 @@ Handles CRUD operations for external sessions in the LangGraph rollback agent sy
 from typing import Optional, List
 from datetime import datetime, timezone
 
+from sqlalchemy.orm.attributes import flag_modified
+
 from agentgit.sessions.external_session import ExternalSession
 from agentgit.database.db_config import get_database_path, get_db_connection, init_db
 from agentgit.database.models import ExternalSession as ExternalSessionModel
@@ -58,7 +60,7 @@ class ExternalSessionRepository:
             db_external_session = ExternalSessionModel(
                 user_id=session.user_id,
                 session_name=session.session_name,
-                updated_at=session.updated_at,
+                updated_at=None,
                 is_active=session.is_active,
                 data=session_dict,
                 session_metadata=session.metadata,
@@ -72,6 +74,9 @@ class ExternalSessionRepository:
             # Update session.created_at from database
             if db_external_session.created_at:
                 session.created_at = db_external_session.created_at
+                # Sync data field with database column to ensure consistency
+                db_external_session.data['created_at'] = session.created_at.isoformat()
+                flag_modified(db_external_session, "data")
 
         return session
 
@@ -293,7 +298,6 @@ class ExternalSessionRepository:
             session_dict["metadata"] = db_sess.session_metadata if isinstance(db_sess.session_metadata, dict) else {}
         session_dict["branch_count"] = db_sess.branch_count or 0
         session_dict["total_checkpoints"] = db_sess.total_checkpoints or 0
-        
         session = ExternalSession.from_dict(session_dict)
         session.id = db_sess.id  # Ensure ID is set
         

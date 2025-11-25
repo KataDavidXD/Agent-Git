@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from agentgit.auth.user import User
 from agentgit.database.db_config import get_database_path, get_db_connection
 from agentgit.database.models import User as UserModel
+from sqlalchemy.orm.attributes import flag_modified
 
 
 class UserRepository:
@@ -88,7 +89,7 @@ class UserRepository:
                     username=user.username,
                     password_hash=user.password_hash,
                     is_admin=user.is_admin,
-                    last_login=user.last_login,
+                    last_login=None,
                     data=user_dict,
                     api_key=user.api_key,
                     session_limit=user.session_limit,
@@ -100,6 +101,9 @@ class UserRepository:
                 # Update user.created_at from database
                 if db_user.created_at:
                     user.created_at = db_user.created_at
+                    # Sync data field with database column to ensure consistency
+                    db_user.data['created_at'] = user.created_at.isoformat()
+                    flag_modified(db_user, 'data')
             else:
                 # Update existing user
                 db_user = session.query(UserModel).filter_by(id=user.id).first()
@@ -182,6 +186,10 @@ class UserRepository:
             db_user = session.query(UserModel).filter_by(id=user_id).first()
             if db_user:
                 db_user.last_login = datetime.now(timezone.utc)
+                # Sync data field with database column to ensure consistency
+                if db_user.data and isinstance(db_user.data, dict):
+                    db_user.data['last_login'] = db_user.last_login.isoformat()
+                    flag_modified(db_user, 'data')
                 return True
             return False
 
@@ -310,9 +318,6 @@ class UserRepository:
                 "metadata": {}
             }
         
-        # Always use database column values, and override any values from JSON data
-        user_dict["created_at"] = db_user.created_at.isoformat() if db_user.created_at else None
-        user_dict["last_login"] = db_user.last_login.isoformat() if db_user.last_login else None
         user_dict["api_key"] = db_user.api_key
         user_dict["session_limit"] = db_user.session_limit or 5
         user_dict["password_hash"] = db_user.password_hash

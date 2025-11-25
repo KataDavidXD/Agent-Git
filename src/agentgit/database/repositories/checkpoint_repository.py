@@ -6,6 +6,7 @@ Handles CRUD operations for checkpoints in the LangGraph rollback agent system.
 from typing import Optional, List, Dict
 from datetime import datetime, timezone
 
+from sqlalchemy.orm.attributes import flag_modified
 from agentgit.checkpoints.checkpoint import Checkpoint
 from agentgit.database.db_config import get_database_path, get_db_connection, init_db
 from agentgit.database.models import Checkpoint as CheckpointModel
@@ -66,6 +67,9 @@ class CheckpointRepository:
             # Update checkpoint.created_at from database
             if db_checkpoint.created_at:
                 checkpoint.created_at = db_checkpoint.created_at
+                # Sync data field with database column to ensure consistency
+                db_checkpoint.checkpoint_data['created_at'] = checkpoint.created_at.isoformat()
+                flag_modified(db_checkpoint, 'checkpoint_data')
 
         return checkpoint
 
@@ -288,7 +292,5 @@ class CheckpointRepository:
         checkpoint_dict = db_cp.checkpoint_data if isinstance(db_cp.checkpoint_data, dict) else {}
         checkpoint = Checkpoint.from_dict(checkpoint_dict)
         checkpoint.id = db_cp.id  # Ensure ID is set
-        # Always use database column value for created_at (source of truth)
-        checkpoint.created_at = db_cp.created_at
         
         return checkpoint
