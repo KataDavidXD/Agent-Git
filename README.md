@@ -70,6 +70,7 @@ Agent Git enables equivalent operations via a three-layer architecture.
 
 <img width="1769" height="1071" alt="image" src="https://github.com/user-attachments/assets/89ac981b-465f-410e-881b-0553c716d01c" />
 
+
 ### Core Concepts
 
 * **Commit State** : A saved snapshot of an agent’s state (internal context + tool usage), persisted in the database.
@@ -91,11 +92,19 @@ Agent Git enables equivalent operations via a three-layer architecture.
 - **Drop-in Integration**: Works seamlessly with existing LangGraph applications
 - **Production Ready**: Comprehensive error handling, testing, and performance optimization
 
+
+## Timeline
+
+[Nov 2025]: v0.1.0-alpha — Excited to announce: The initial release of Agent-Git has been accepted for the WMAC: Bridging Large Language Models and Multi-Agent Systems, AAAI Workshop 2026!
+
+[Nov 2025]: v0.2.0-alpha Release — Introduced two-level rollback mechanics and architectural improvements (new manager classes, checkpoint management).
+
+
 ## 📦 Download Pre-release Wheel
 
 You can download the **pre-release version** of Agent Git as a Python wheel from our GitHub Releases:
 
-[![Pre-release Wheel](https://img.shields.io/badge/Download-Pre--release-blue?logo=python&logoColor=white)](https://github.com/KataDavidXD/Agent-Git/releases/tag/V0.1.0-alpha)
+[![Pre-release Wheel](https://img.shields.io/badge/Download-Pre--release-blue?logo=python&logoColor=white)](https://github.com/KataDavidXD/Agent-Git/releases/tag/V0.2.0-alpha)
 
 > ⚠️ This is a pre-release version. Please use with caution and report any issues.
 
