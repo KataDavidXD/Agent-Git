@@ -1,29 +1,27 @@
-"""User repository for database operations.
+"""User repository for database operations using SQLAlchemy ORM.
 
-Provides ORM functionality for User entities with SQLite backend.
+Provides ORM functionality for User entities.
 """
 
-import sqlite3
-import json
 from typing import Optional, List
-from datetime import datetime
-from pathlib import Path
+from datetime import datetime, timezone
 
 from agentgit.auth.user import User
-from agentgit.database.db_config import get_database_path
-
+from agentgit.database.db_config import get_database_path, get_db_connection
+from agentgit.database.models import User as UserModel
+from sqlalchemy.orm.attributes import flag_modified
 
 
 class UserRepository:
-    """Repository for User CRUD operations with SQLite.
-    
+    """Repository for User CRUD operations with SQLAlchemy ORM.
+
     This class handles all database operations for User entities,
     including automatic initialization of the database schema and
     creation of the default admin user (rootusr).
-    
+
     Attributes:
-        db_path: Path to the SQLite database file.
-    
+        db_path: Path to the database file or connection string.
+
     Example:
         >>> repo = UserRepository()
         >>> user = User(username="alice")
@@ -35,282 +33,189 @@ class UserRepository:
     """
     def __init__(self, db_path: Optional[str] = None):
         """Initialize the user repository.
-        
+
         Args:
-            db_path: Path to SQLite database file. If None, uses configured default.
+            db_path: Path to database file. If None, uses configured default.
         """
         self.db_path = db_path or get_database_path()
         self._init_db()
-    
+
     def _init_db(self):
         """Initialize database schema and create default admin user.
-        
+
         Creates the users table if it doesn't exist and ensures
         the rootusr admin account is present with default password "1234".
-        Also handles migration for new fields.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
-            cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
-                    password_hash TEXT NOT NULL,
-                    is_admin INTEGER DEFAULT 0,
-                    created_at TEXT,
-                    last_login TEXT,
-                    data TEXT,
-                    api_key TEXT,
-                    session_limit INTEGER DEFAULT 5
-                )
-            """)
+        from agentgit.database.models import Base
+        
+        # Initialize tables using the same connection that will be used
+        with get_db_connection(self.db_path) as session:
+            # Create all tables in this database
+            Base.metadata.create_all(bind=session.bind)
             
-            # Check if we need to add new columns (for migration)
-            cursor.execute("PRAGMA table_info(users)")
-            columns = [column[1] for column in cursor.fetchall()]
+            # Check for default admin user
+            existing_root = session.query(UserModel).filter_by(username="rootusr").first()
             
-            if 'api_key' not in columns:
-                cursor.execute("ALTER TABLE users ADD COLUMN api_key TEXT")
-            
-            if 'session_limit' not in columns:
-                cursor.execute("ALTER TABLE users ADD COLUMN session_limit INTEGER DEFAULT 5")
-            
-            cursor.execute("""
-                SELECT COUNT(*) FROM users WHERE username = 'rootusr'
-            """)
-            if cursor.fetchone()[0] == 0:
+            if not existing_root:
                 root_user = User(
                     username="rootusr",
                     is_admin=True,
-                    created_at=datetime.now()
                 )
                 root_user.set_password("1234")
                 self.save(root_user)
-            
-            conn.commit()
-        finally:
-            conn.close()
-    
+
     def save(self, user: User) -> User:
         """Save or update a user in the database.
-        
+
         Performs insert if user.id is None, otherwise updates existing record.
         Stores both structured fields and full JSON representation for flexibility.
-        
+
         Args:
             user: User object to save.
-            
+
         Returns:
             The saved User object with id populated if newly created.
-            
+
         Note:
             Password hash is stored separately from the JSON data for security.
         """
         user_dict = user.to_dict()
         user_dict['password_hash'] = user.password_hash
-        json_data = json.dumps(user_dict)
-        
-        conn = sqlite3.connect(self.db_path)
-        try:
-            cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            
+
+        with get_db_connection(self.db_path) as session:
             if user.id is None:
-                cursor.execute("""
-                    INSERT INTO users (username, password_hash, is_admin, created_at, last_login, data, api_key, session_limit)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    user.username,
-                    user.password_hash,
-                    1 if user.is_admin else 0,
-                    user.created_at.isoformat() if user.created_at else None,
-                    user.last_login.isoformat() if user.last_login else None,
-                    json_data,
-                    user.api_key,
-                    user.session_limit
-                ))
-                user.id = cursor.lastrowid
+                # Create new user
+                db_user = UserModel(
+                    username=user.username,
+                    password_hash=user.password_hash,
+                    is_admin=user.is_admin,
+                    last_login=None,
+                    data=user_dict,
+                    api_key=user.api_key,
+                    session_limit=user.session_limit,
+                )
+                # created_at is auto-generated by server_default
+                session.add(db_user)
+                session.flush()
+                user.id = db_user.id
+                # Update user.created_at from database
+                if db_user.created_at:
+                    user.created_at = db_user.created_at
+                    # Sync data field with database column to ensure consistency
+                    db_user.data['created_at'] = user.created_at.isoformat()
+                    flag_modified(db_user, 'data')
             else:
-                cursor.execute("""
-                    UPDATE users 
-                    SET username = ?, password_hash = ?, is_admin = ?, 
-                        created_at = ?, last_login = ?, data = ?, api_key = ?, session_limit = ?
-                    WHERE id = ?
-                """, (
-                    user.username,
-                    user.password_hash,
-                    1 if user.is_admin else 0,
-                    user.created_at.isoformat() if user.created_at else None,
-                    user.last_login.isoformat() if user.last_login else None,
-                    json_data,
-                    user.api_key,
-                    user.session_limit,
-                    user.id
-                ))
-            
-            conn.commit()
-        finally:
-            conn.close()
-        
+                # Update existing user
+                db_user = session.query(UserModel).filter_by(id=user.id).first()
+                if db_user:
+                    db_user.username = user.username
+                    db_user.password_hash = user.password_hash
+                    db_user.is_admin = user.is_admin
+                    db_user.last_login = user.last_login
+                    db_user.data = user_dict
+                    db_user.api_key = user.api_key
+                    db_user.session_limit = user.session_limit
+
         return user
-    
+
     def find_by_id(self, user_id: int) -> Optional[User]:
         """Find a user by their database ID.
-        
+
         Args:
             user_id: The unique identifier of the user.
-            
+
         Returns:
             User object if found, None otherwise.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
-            cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            cursor.execute("""
-                SELECT id, username, password_hash, is_admin, created_at, last_login, data, api_key, session_limit
-                FROM users WHERE id = ?
-            """, (user_id,))
-            
-            row = cursor.fetchone()
-            if row:
-                return self._row_to_user(row)
-        finally:
-            conn.close()
-        
+        with get_db_connection(self.db_path) as session:
+            db_user = session.query(UserModel).filter_by(id=user_id).first()
+            if db_user:
+                return self._row_to_user(db_user)
         return None
-    
+
     def find_by_username(self, username: str) -> Optional[User]:
         """Find a user by their username.
-        
+
         Args:
             username: The username to search for.
-            
+
         Returns:
             User object if found, None otherwise.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
-            cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            cursor.execute("""
-                SELECT id, username, password_hash, is_admin, created_at, last_login, data, api_key, session_limit
-                FROM users WHERE username = ?
-            """, (username,))
-            
-            row = cursor.fetchone()
-            if row:
-                return self._row_to_user(row)
-        finally:
-            conn.close()
-        
+        with get_db_connection(self.db_path) as session:
+            db_user = session.query(UserModel).filter_by(username=username).first()
+            if db_user:
+                return self._row_to_user(db_user)
         return None
-    
+
     def find_all(self) -> List[User]:
         """Retrieve all users from the database.
-        
+
         Returns:
             List of all User objects in the database.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
-            cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            cursor.execute("""
-                SELECT id, username, password_hash, is_admin, created_at, last_login, data, api_key, session_limit
-                FROM users
-            """)
-            
-            rows = cursor.fetchall()
-            return [self._row_to_user(row) for row in rows]
-        finally:
-            conn.close()
-    
+        with get_db_connection(self.db_path) as session:
+            db_users = session.query(UserModel).all()
+            return [self._row_to_user(db_user) for db_user in db_users]
+
     def find_by_api_key(self, api_key: str) -> Optional[User]:
         """Find a user by their API key.
-        
+
         Args:
             api_key: The API key to search for.
-            
+
         Returns:
             User object if found, None otherwise.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
-            cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            cursor.execute("""
-                SELECT id, username, password_hash, is_admin, created_at, last_login, data, api_key, session_limit
-                FROM users WHERE api_key = ?
-            """, (api_key,))
-            
-            row = cursor.fetchone()
-            if row:
-                return self._row_to_user(row)
-        finally:
-            conn.close()
-        
+        with get_db_connection(self.db_path) as session:
+            db_user = session.query(UserModel).filter_by(api_key=api_key).first()
+            if db_user:
+                return self._row_to_user(db_user)
         return None
-    
+
     def update_last_login(self, user_id: int) -> bool:
         """Update the last login timestamp for a user.
-        
+
         Args:
             user_id: The ID of the user to update.
-            
+
         Returns:
             True if updated successfully, False otherwise.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
-            cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            cursor.execute("""
-                UPDATE users SET last_login = ? WHERE id = ?
-            """, (datetime.now().isoformat(), user_id))
-            conn.commit()
-            return cursor.rowcount > 0
-        finally:
-            conn.close()
-    
+        with get_db_connection(self.db_path) as session:
+            db_user = session.query(UserModel).filter_by(id=user_id).first()
+            if db_user:
+                db_user.last_login = datetime.now(timezone.utc)
+                # Sync data field with database column to ensure consistency
+                if db_user.data and isinstance(db_user.data, dict):
+                    db_user.data['last_login'] = db_user.last_login.isoformat()
+                    flag_modified(db_user, 'data')
+                return True
+            return False
+
     def update_api_key(self, user_id: int, api_key: Optional[str]) -> bool:
         """Update or remove a user's API key.
-        
+
         Args:
             user_id: The ID of the user to update.
             api_key: New API key or None to remove.
-            
+
         Returns:
             True if updated successfully, False otherwise.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
-            cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            cursor.execute("""
-                UPDATE users SET api_key = ? WHERE id = ?
-            """, (api_key, user_id))
-            conn.commit()
-            return cursor.rowcount > 0
-        finally:
-            conn.close()
-    
+        with get_db_connection(self.db_path) as session:
+            db_user = session.query(UserModel).filter_by(id=user_id).first()
+            if db_user:
+                db_user.api_key = api_key
+                return True
+            return False
+
     def get_user_sessions(self, user_id: int) -> List[int]:
         """Get all active session IDs for a user.
-        
+
         Args:
             user_id: The ID of the user.
-            
+
         Returns:
             List of active session IDs.
         """
@@ -318,14 +223,14 @@ class UserRepository:
         if user:
             return user.active_sessions
         return []
-    
+
     def update_user_sessions(self, user_id: int, session_ids: List[int]) -> bool:
         """Update the active sessions list for a user.
-        
+
         Args:
             user_id: The ID of the user.
             session_ids: New list of active session IDs.
-            
+
         Returns:
             True if updated successfully, False otherwise.
         """
@@ -335,14 +240,14 @@ class UserRepository:
             self.save(user)
             return True
         return False
-    
+
     def update_user_preferences(self, user_id: int, preferences: dict) -> bool:
         """Update user preferences.
-        
+
         Args:
             user_id: The ID of the user.
             preferences: Dictionary of preferences to update.
-            
+
         Returns:
             True if updated successfully, False otherwise.
         """
@@ -352,16 +257,16 @@ class UserRepository:
             self.save(user)
             return True
         return False
-    
+
     def cleanup_inactive_sessions(self, user_id: int, active_session_ids: List[int]) -> bool:
         """Clean up inactive sessions for a user.
-        
+
         Removes session IDs that are no longer active from the user's active_sessions list.
-        
+
         Args:
             user_id: The ID of the user.
             active_session_ids: List of session IDs that are still active.
-            
+
         Returns:
             True if cleanup was performed, False otherwise.
         """
@@ -372,67 +277,52 @@ class UserRepository:
             self.save(user)
             return True
         return False
-    
+
     def delete(self, user_id: int) -> bool:
         """Delete a user from the database.
-        
+
         Args:
             user_id: The ID of the user to delete.
-            
+
         Returns:
             True if a user was deleted, False if no user found.
         """
-        conn = sqlite3.connect(self.db_path)
-        try:
-            cursor = conn.cursor()
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
-            cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
-            conn.commit()
-            return cursor.rowcount > 0
-        finally:
-            conn.close()
-    
-    def _row_to_user(self, row) -> User:
-        """Convert a database row to a User object.
-        
+        with get_db_connection(self.db_path) as session:
+            db_user = session.query(UserModel).filter_by(id=user_id).first()
+            if db_user:
+                session.delete(db_user)
+                return True
+            return False
+
+    def _row_to_user(self, db_user: UserModel) -> User:
+        """Convert a database model to a User object.
+
         Args:
-            row: Tuple containing database fields (id, username, password_hash,
-                 is_admin, created_at, last_login, json_data, api_key, session_limit).
+            db_user: UserModel instance from database.
             
         Returns:
             User object reconstructed from database data.
             
         Note:
-            Prioritizes JSON data if available, falls back to individual fields.
+            Database columns always override JSON data for datetime fields.
         """
-        user_id, username, password_hash, is_admin, created_at, last_login, json_data, api_key, session_limit = row
-        
-        if json_data:
-            user_dict = json.loads(json_data)
-            # Ensure api_key and session_limit from columns override JSON data
-            # This handles migration cases where JSON might not have these fields
-            if api_key is not None:
-                user_dict["api_key"] = api_key
-            if session_limit is not None:
-                user_dict["session_limit"] = session_limit
+        if db_user.data and isinstance(db_user.data, dict):
+            user_dict = db_user.data.copy()
         else:
             user_dict = {
-                "id": user_id,
-                "username": username,
-                "is_admin": bool(is_admin),
-                "created_at": created_at,
-                "last_login": last_login,
-                "api_key": api_key,
-                "session_limit": session_limit or 5,
+                "id": db_user.id,
+                "username": db_user.username,
+                "is_admin": db_user.is_admin,
                 "active_sessions": [],
                 "preferences": {},
                 "metadata": {}
             }
         
-        user_dict["password_hash"] = password_hash
+        user_dict["api_key"] = db_user.api_key
+        user_dict["session_limit"] = db_user.session_limit or 5
+        user_dict["password_hash"] = db_user.password_hash
         
         user = User.from_dict(user_dict)
-        user.id = user_id
+        user.id = db_user.id
         
         return user

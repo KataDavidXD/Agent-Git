@@ -4,6 +4,8 @@ from agentgit.database.repositories.external_session_repository import ExternalS
 from agentgit.database.repositories.user_repository import UserRepository
 from langchain_core.tools import tool
 from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()
 
 # Define tools
 @tool
@@ -13,6 +15,7 @@ def process_payment(amount: float, order_id: str) -> str:
 
 def reverse_payment(args, result):
     """Reverse a payment."""
+    print(f"  ✓ Reversed: Refunded ${args['amount']} for order {args['order_id']}")
     return f"Refunded ${args['amount']} for order {args['order_id']}"
 
 # Step 1: Create user and external session (same as before)
@@ -58,11 +61,14 @@ print(response2)
 checkpoints = service.list_checkpoints(agent.internal_session.id)
 print(f"Total checkpoints: {len(checkpoints)}")
 
-# Step 6: Resume session later (one line!)
+# Step 6: Resume session later
 # Simulate app restart
-agent = None
 service = AgentService()
-resumed_agent = service.resume_agent(external_session_id=external_session.id)
+resumed_agent = service.resume_agent(
+    external_session_id=external_session.id,
+    tools=[process_payment],
+    reverse_tools={"process_payment": reverse_payment}
+)
 # ✓ Conversation history automatically restored
 # ✓ Session state automatically loaded
 # ✓ Ready to continue immediately
@@ -71,11 +77,13 @@ if resumed_agent:
     response3 = resumed_agent.run("What payments did we process?")
     print(response3)
 
-# Step 7: Rollback with automatic tool reversal (one line!)
+# Step 7: Rollback with automatic tool reversal
 rolled_back = service.rollback_to_checkpoint(
     external_session_id=external_session.id,
     checkpoint_id=checkpoint_id,
-    rollback_tools=True  # Automatically reverses payment operations!
+    rollback_tools=True,  # Automatically reverses payment operations!
+    tools=[process_payment],
+    reverse_tools={"process_payment": reverse_payment}
 )
 # ✓ Checkpoint retrieved automatically
 # ✓ Tool operations reversed automatically
@@ -85,3 +93,4 @@ rolled_back = service.rollback_to_checkpoint(
 if rolled_back:
     response4 = rolled_back.run("Let's try a different payment amount: $300 for order #1003")
     print(response4)
+    print()

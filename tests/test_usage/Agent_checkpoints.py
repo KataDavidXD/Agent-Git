@@ -5,6 +5,8 @@ from agentgit.database.repositories.checkpoint_repository import CheckpointRepos
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()
 
 # Setup (as in Case 1)
 external_repo = ExternalSessionRepository()

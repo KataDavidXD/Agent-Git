@@ -4,6 +4,8 @@ from agentgit.database.repositories.external_session_repository import ExternalS
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()
 
 # Step 1: Create an external session (conversation container)
 external_repo = ExternalSessionRepository()
